@@ -7,6 +7,7 @@ from requests_cache import CachedSession
 from klt.resources import (
     make_last_submission_time_hint,
     make_resource_kobo_asset,
+    make_resource_kobo_audit_file,
     make_resource_kobo_submission,
 )
 from klt.resources.kobo_asset import make_resource_kobo_asset_content
@@ -51,12 +52,14 @@ def kobo_source(
     kobo_submission = make_resource_kobo_submission(
         kobo_client, kobo_asset_for_data, submission_time_start=submission_time_start
     )
+    kobo_audit = make_resource_kobo_audit_file(kobo_client, kobo_submission)
 
     return [
         kobo_asset_for_data,
         kobo_asset_for_content,
         kobo_submission,
         kobo_asset_content,
+        kobo_audit,
     ]
 
 

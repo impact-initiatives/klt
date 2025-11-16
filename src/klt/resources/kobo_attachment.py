@@ -14,6 +14,7 @@ def make_resource_kobo_audit_file(
 ):
     @dlt.transformer(name="audit", data_from=kobo_submission)
     def kobo_audit(submissions):
+        # TODO: Include a submission identifier, and a a form identifier
         for submission in submissions:
             audit_file = next(
                 filter(
