@@ -1,20 +1,20 @@
 from datetime import datetime
 
 import dlt
+from dlt.extract.source import DltSource
 from dlt.sources.helpers.rest_client.client import RESTClient
 from requests_cache import CachedSession
 
 from klt.resources import (
     make_last_submission_time_hint,
     make_resource_kobo_asset,
-    make_resource_kobo_audit_file,
     make_resource_kobo_submission,
 )
 from klt.resources.kobo_asset import make_resource_kobo_asset_content
 from klt.rest_client import make_rest_client
 
 
-@dlt.source
+@dlt.source()
 def kobo_source(
     submission_time_start: datetime,
     asset_last_submission_start: datetime,
@@ -22,7 +22,7 @@ def kobo_source(
     kobo_token: str = dlt.secrets.value,
     kobo_server: str = dlt.secrets.value,
     kobo_project_view: str = dlt.secrets.value,
-):
+) -> DltSource:
     cached_session = CachedSession(expire_after=60 * 60 * 24)
     kobo_client: RESTClient = make_rest_client(
         kobo_token, kobo_server, session=cached_session
@@ -52,14 +52,14 @@ def kobo_source(
     kobo_submission = make_resource_kobo_submission(
         kobo_client, kobo_asset_for_data, submission_time_start=submission_time_start
     )
-    kobo_audit = make_resource_kobo_audit_file(kobo_client, kobo_submission)
+    # kobo_audit = make_resource_kobo_audit_file(kobo_client, kobo_submission)
 
-    return [
+    return [  # type: ignore[return-value]
         kobo_asset_for_data,
         kobo_asset_for_content,
         kobo_submission,
         kobo_asset_content,
-        kobo_audit,
+        # kobo_audit,
     ]
 
 
