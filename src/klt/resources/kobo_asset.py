@@ -93,6 +93,48 @@ def make_resource_kobo_asset_content(
     parallelized: bool = True,
     selected: bool = True,
 ) -> DltResource:
+    """Create a DLT transformer for fetching asset content from KoboToolbox.
+
+    Fetches detailed form content (questions, settings, schema) for each asset
+    yielded by the parent kobo_asset resource. Uses the DLT transformer pattern
+    to create a dependent resource that processes each asset individually.
+
+    Parameters
+    ----------
+    kobo_client : RESTClient
+        Authenticated REST client for KoboToolbox API requests.
+    kobo_asset : DltResource
+        Parent DLT resource that yields asset records. Each asset must
+        contain a "uid" field used to fetch the corresponding content.
+    parallelized : bool, default=True
+        Whether to enable parallel processing of this transformer.
+    selected : bool, default=True
+        Whether this resource is selected for loading by default.
+
+    Returns
+    -------
+    DltResource
+        Configured DLT transformer resource with timestamp parsing applied.
+        Yields content data for each asset from the parent resource.
+
+    Notes
+    -----
+    The transformer automatically:
+    - Extracts the asset UID from each parent asset record
+    - Fetches content from /api/v2/assets/{asset_uid}/content/ endpoint
+    - Parses ISO timestamp fields to datetime objects
+    - Handles 404 and 502 HTTP errors gracefully via hooks
+
+    This resource is designed to work with make_resource_kobo_asset and
+    should receive a kobo_asset resource instance as the data source.
+
+    Examples
+    --------
+    >>> kobo_client = make_rest_client(...)
+    >>> asset_resource = make_resource_kobo_asset(kobo_client, "view_uid")
+    >>> content_resource = make_resource_kobo_asset_content(kobo_client, asset_resource)
+    """
+
     @dlt.transformer(
         data_from=kobo_asset,
         name="kobo_asset_content",
