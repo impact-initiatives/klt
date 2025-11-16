@@ -87,6 +87,34 @@ def make_resource_kobo_asset(
     return kobo_asset
 
 
+def make_resource_kobo_asset_content(
+    kobo_client: RESTClient,
+    kobo_asset: DltResource,
+    parallelized: bool = True,
+    selected: bool = True,
+) -> DltResource:
+    @dlt.transformer(
+        data_from=kobo_asset,
+        name="kobo_asset_content",
+        parallelized=parallelized,
+        selected=selected,
+    )
+    def kobo_asset_content(asset):
+        asset_uid = asset["uid"]
+        path = f"/api/v2/assets/{asset_uid}/content/"
+
+        params = {
+            "format": "json",
+        }
+        for page in kobo_client.paginate(
+            path=path, params=params, data_selector="data", hooks=asset_hooks
+        ):
+            yield page
+
+    kobo_asset_content.add_map(parse_timestamps)
+    return kobo_asset_content
+
+
 def make_last_submission_time_hint(initial_value: datetime):
     """Create incremental hint for deployment__last_submission_time cursor.
 
