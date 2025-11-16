@@ -4,6 +4,8 @@ import typer
 
 from klt.kobotoolbox_pipeline import load_kobo
 
+from .kobotoolbox_pipeline import pipeline
+
 app = typer.Typer()
 
 
@@ -42,3 +44,8 @@ def run(
         asset_last_submission_start=asset_last_submission_start,
         asset_modified_start=asset_modified_start,
     )
+
+
+@app.command()
+def drop():
+    pipeline.drop()
