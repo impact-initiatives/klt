@@ -32,7 +32,7 @@ def make_resource_kobo_submission(
         for page in kobo_client.paginate(
             path=path, params=params, data_selector="results", hooks=submission_hooks
         ):
-            yield from page
+            yield page
 
     kobo_submission.add_map(parse_timestamps)
     kobo_submission.add_map(transform_submission_data)
