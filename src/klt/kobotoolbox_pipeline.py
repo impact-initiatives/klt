@@ -9,6 +9,7 @@ from klt.resources import (
     make_resource_kobo_asset,
     make_resource_kobo_submission,
 )
+from klt.resources.kobo_asset import make_resource_kobo_asset_content
 from klt.rest_client import make_rest_client
 
 
@@ -30,21 +31,33 @@ def kobo_source(
         asset_last_submission_start
     )
 
-    kobo_asset = make_resource_kobo_asset(
-        kobo_client, kobo_project_view_uid=kobo_project_view, selected=False
-    ).apply_hints(incremental=last_submission_time_hint)
-
-    kobo_asset_content = make_resource_kobo_asset(
+    kobo_asset_for_data = make_resource_kobo_asset(
         kobo_client,
         kobo_project_view_uid=kobo_project_view,
-        resource_name="kobo_asset_content",
+        resource_name="kobo_asset_for_data",
+        selected=False,
     ).apply_hints(incremental=last_submission_time_hint)
 
-    kobo_submission = make_resource_kobo_submission(
-        kobo_client, kobo_asset, submission_time_start=submission_time_start
+    kobo_asset_for_content = make_resource_kobo_asset(
+        kobo_client,
+        kobo_project_view_uid=kobo_project_view,
+        resource_name="kobo_asset",
+    ).apply_hints(incremental=last_submission_time_hint)
+
+    kobo_asset_content = make_resource_kobo_asset_content(
+        kobo_client, kobo_asset_for_content
     )
 
-    return [kobo_asset, kobo_asset_content, kobo_submission]
+    kobo_submission = make_resource_kobo_submission(
+        kobo_client, kobo_asset_for_data, submission_time_start=submission_time_start
+    )
+
+    return [
+        kobo_asset_for_data,
+        kobo_asset_for_content,
+        kobo_submission,
+        kobo_asset_content,
+    ]
 
 
 pipeline: dlt.Pipeline = dlt.pipeline(
