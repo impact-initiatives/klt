@@ -85,4 +85,4 @@ def load_kobo(
         write_disposition="merge",
     )
     last_trace = pipeline.last_trace
-    pipeline.run([last_trace], table_name="trace")
+    pipeline.run([last_trace], table_name="trace", write_disposition="append")
