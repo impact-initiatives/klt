@@ -11,9 +11,52 @@ submission_hooks = make_kobo_pipeline_hooks(
 )
 
 
-def make_resource_kobo_submission(
-    kobo_client: RESTClient, kobo_asset, submission_time_start: datetime
+def make_submission_time_hint(
+    initial_value: datetime, end_value: datetime | None = None
 ):
+    """Create incremental hint for _submission_time cursor.
+
+    Enables incremental loading based on submission timestamp.
+
+    Parameters
+    ----------
+    initial_value : datetime
+        Starting cursor value for the first incremental load. Submissions with
+        _submission_time >= this value will be included.
+    end_value : datetime | None, optional
+        Optional ending cursor value for the incremental load. Submissions with
+        _submission_time < this value will be included.
+        If None, no upper bound is applied.
+
+    Returns
+    -------
+    dlt.sources.incremental
+        Incremental hint configured with cursor_path set to "_submission_time".
+
+    Notes
+    -----
+    This hint is used to filter submissions based on their submission timestamp,
+    enabling efficient incremental loading of new submissions.
+    """
+    hint_params = {
+        "cursor_path": "_submission_time",
+        "initial_value": initial_value,
+    }
+    if end_value is not None:
+        hint_params["end_value"] = end_value
+    return dlt.sources.incremental(**hint_params)
+
+
+def make_resource_kobo_submission(
+    kobo_client: RESTClient,
+    kobo_asset,
+    submission_time_start: datetime,
+    submission_time_end: datetime | None = None,
+):
+    submission_time_hint = make_submission_time_hint(
+        submission_time_start, submission_time_end
+    )
+
     @dlt.transformer(
         data_from=kobo_asset,
         parallelized=False,
@@ -36,6 +79,7 @@ def make_resource_kobo_submission(
 
     kobo_submission.add_map(parse_timestamps)
     kobo_submission.add_map(transform_submission_data)
+    kobo_submission.apply_hints(incremental=submission_time_hint)
     return kobo_submission
 
 
