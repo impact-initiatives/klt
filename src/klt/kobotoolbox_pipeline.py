@@ -20,21 +20,54 @@ from klt.rest_client import make_rest_client
 @dlt.source()
 def kobo_source(
     submission_time_start: datetime,
+    submission_time_end: datetime | None,
     asset_last_submission_start: datetime,
+    asset_last_submission_end: datetime | None,
     asset_modified_start: datetime,
+    asset_modified_end: datetime | None,
     kobo_token: str = dlt.secrets.value,
     kobo_server: str = dlt.secrets.value,
     kobo_project_view: str = dlt.secrets.value,
 ) -> DltSource:
+    """Create a DLT source for KoboToolbox data extraction.
+
+    Parameters
+    ----------
+    submission_time_start : datetime
+        Initial date for incremental loading of submission data.
+    submission_time_end : datetime | None
+        Optional end date for incremental loading of submission data.
+    asset_last_submission_start : datetime
+        Initial date for filtering assets by deployment__last_submission_time.
+    asset_last_submission_end : datetime | None
+        Optional end date for filtering assets by deployment__last_submission_time.
+    asset_modified_start : datetime
+        Initial date for filtering assets by date_modified field.
+    asset_modified_end : datetime | None
+        Optional end date for filtering assets by date_modified field.
+    kobo_token : str
+        KoboToolbox API authentication token.
+    kobo_server : str
+        KoboToolbox server URL.
+    kobo_project_view : str
+        KoboToolbox project view UID.
+
+    Returns
+    -------
+    DltSource
+        Configured DLT source with asset and submission resources.
+    """
     cached_session = CachedSession(expire_after=60 * 60 * 24)
     kobo_client: RESTClient = make_rest_client(
         kobo_token, kobo_server, session=cached_session
     )
 
     last_submission_time_hint = make_last_submission_time_hint(
-        asset_last_submission_start
+        asset_last_submission_start, asset_last_submission_end
     )
-    date_modified_time_hint = make_date_modified_hint(asset_modified_start)
+    date_modified_time_hint = make_date_modified_hint(
+        asset_modified_start, asset_modified_end
+    )
 
     kobo_asset_for_data = make_resource_kobo_asset(
         kobo_client,
@@ -54,16 +87,17 @@ def kobo_source(
     )
 
     kobo_submission = make_resource_kobo_submission(
-        kobo_client, kobo_asset_for_data, submission_time_start=submission_time_start
+        kobo_client,
+        kobo_asset_for_data,
+        submission_time_start=submission_time_start,
+        submission_time_end=submission_time_end,
     )
-    # kobo_audit = make_resource_kobo_audit_file(kobo_client, kobo_submission)
 
     return [  # type: ignore[return-value]
         kobo_asset_for_data,
         kobo_asset_for_content,
         kobo_submission,
         kobo_asset_content,
-        # kobo_audit,
     ]
 
 
@@ -77,14 +111,20 @@ pipeline: dlt.Pipeline = dlt.pipeline(
 
 def load_kobo(
     submission_time_start: datetime,
+    submission_time_end: datetime | None,
     asset_last_submission_start: datetime,
+    asset_last_submission_end: datetime | None,
     asset_modified_start: datetime,
+    asset_modified_end: datetime | None,
 ):
     pipeline.run(
         kobo_source(
             submission_time_start=submission_time_start,
+            submission_time_end=submission_time_end,
             asset_last_submission_start=asset_last_submission_start,
+            asset_last_submission_end=asset_last_submission_end,
             asset_modified_start=asset_modified_start,
+            asset_modified_end=asset_modified_end,
         ),
         write_disposition="merge",
     )

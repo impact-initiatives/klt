@@ -18,6 +18,13 @@ def run(
         "Only submissions with _submission_time >= this value will be fetched on first run. ",
         rich_help_panel="Incremental Loading",
     ),
+    submission_time_end: datetime | None = typer.Option(
+        None,
+        "--submission-time-end",
+        help="Optional end date for incremental loading of submission data. "
+        "Only submissions with _submission_time < this value will be fetched. ",
+        rich_help_panel="Incremental Loading",
+    ),
     asset_last_submission_start: datetime = typer.Option(
         datetime(year=2000, month=1, day=1),
         "--asset-last-submission-start",
@@ -25,11 +32,25 @@ def run(
         "Only assets with a last submission >= this value will be processed on first run. ",
         rich_help_panel="Incremental Loading",
     ),
+    asset_last_submission_end: datetime | None = typer.Option(
+        None,
+        "--asset-last-submission-end",
+        help="Optional end date for filtering assets by deployment__last_submission_time. "
+        "Only assets with a last submission < this value will be processed. ",
+        rich_help_panel="Incremental Loading",
+    ),
     asset_modified_start: datetime = typer.Option(
         datetime(year=2000, month=1, day=1),
         "--asset-modified-start",
         help="Initial date for filtering assets by date_modified field. "
         "Only assets modified >= this value will be processed on first run. ",
+        rich_help_panel="Incremental Loading",
+    ),
+    asset_modified_end: datetime | None = typer.Option(
+        None,
+        "--asset-modified-end",
+        help="Optional end date for filtering assets by date_modified field. "
+        "Only assets modified < this value will be processed. ",
         rich_help_panel="Incremental Loading",
     ),
 ):
@@ -41,8 +62,11 @@ def run(
     """
     _ = load_kobo(
         submission_time_start=submission_time_start,
+        submission_time_end=submission_time_end,
         asset_last_submission_start=asset_last_submission_start,
+        asset_last_submission_end=asset_last_submission_end,
         asset_modified_start=asset_modified_start,
+        asset_modified_end=asset_modified_end,
     )
 
 
