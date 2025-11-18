@@ -157,7 +157,9 @@ def make_resource_kobo_asset_content(
     return kobo_asset_content
 
 
-def make_last_submission_time_hint(initial_value: datetime):
+def make_last_submission_time_hint(
+    initial_value: datetime, end_value: datetime | None = None
+):
     """Create incremental hint for deployment__last_submission_time cursor.
 
     Enables incremental loading based on the last submission timestamp,
@@ -168,6 +170,10 @@ def make_last_submission_time_hint(initial_value: datetime):
     initial_value : datetime
         Starting cursor value for the first incremental load. Assets with
         deployment__last_submission_time >= this value will be included.
+    end_value : datetime | None, optional
+        Optional ending cursor value for the incremental load. Assets with
+        deployment__last_submission_time < this value will be included.
+        If None, no upper bound is applied.
 
     Returns
     -------
@@ -182,14 +188,17 @@ def make_last_submission_time_hint(initial_value: datetime):
     have deployment__last_submission_time immediately available after
     creation or if they haven't received submissions yet.
     """
-    return dlt.sources.incremental(
-        cursor_path="deployment__last_submission_time",
-        initial_value=initial_value,
-        on_cursor_value_missing="include",
-    )
+    hint_params = {
+        "cursor_path": "deployment__last_submission_time",
+        "initial_value": initial_value,
+        "on_cursor_value_missing": "include",
+    }
+    if end_value is not None:
+        hint_params["end_value"] = end_value
+    return dlt.sources.incremental(**hint_params)
 
 
-def make_date_modified_hint(initial_value: datetime):
+def make_date_modified_hint(initial_value: datetime, end_value: datetime | None = None):
     """Create incremental hint for date_modified cursor.
 
     Enables incremental loading based on asset modification timestamp,
@@ -200,6 +209,10 @@ def make_date_modified_hint(initial_value: datetime):
     initial_value : datetime
         Starting cursor value for the first incremental load. Assets with
         date_modified >= this value will be included.
+    end_value : datetime | None, optional
+        Optional ending cursor value for the incremental load. Assets with
+        date_modified < this value will be included.
+        If None, no upper bound is applied.
 
     Returns
     -------
@@ -214,8 +227,11 @@ def make_date_modified_hint(initial_value: datetime):
     unused but available for future incremental loading scenarios that need
     to track asset modifications rather than submission activity.
     """
-    return dlt.sources.incremental(
-        cursor_path="date_modified",
-        initial_value=initial_value,
-        on_cursor_value_missing="raise",
-    )
+    hint_params = {
+        "cursor_path": "date_modified",
+        "initial_value": initial_value,
+        "on_cursor_value_missing": "raise",
+    }
+    if end_value is not None:
+        hint_params["end_value"] = end_value
+    return dlt.sources.incremental(**hint_params)
