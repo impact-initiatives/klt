@@ -45,3 +45,6 @@ addopts = [
     "--import-mode=importlib",
 ]
 mock_use_standalone_module = true
+filterwarnings = [
+    "ignore:This process \\(pid=\\d+\\) is multi-threaded, use of fork\\(\\) may lead to deadlocks in the child\\.:DeprecationWarning",
+]
