@@ -151,7 +151,9 @@ def make_resource_kobo_asset_content(
         for page in kobo_client.paginate(
             path=path, params=params, data_selector="data", hooks=asset_hooks
         ):
-            yield page
+            for item in page:
+                item["asset_uid"] = asset_uid
+                yield item
 
     kobo_asset_content.add_map(parse_timestamps)
     return kobo_asset_content
