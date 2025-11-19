@@ -3,7 +3,6 @@ from datetime import datetime
 import dlt
 from dlt.extract.source import DltSource
 from dlt.sources.helpers.rest_client.client import RESTClient
-from requests_cache import CachedSession
 
 from klt.resources import (
     make_last_submission_time_hint,
@@ -57,10 +56,7 @@ def kobo_source(
     DltSource
         Configured DLT source with asset and submission resources.
     """
-    cached_session = CachedSession(expire_after=60 * 60 * 24)
-    kobo_client: RESTClient = make_rest_client(
-        kobo_token, kobo_server, session=cached_session
-    )
+    kobo_client: RESTClient = make_rest_client(kobo_token, kobo_server)
 
     last_submission_time_hint = make_last_submission_time_hint(
         asset_last_submission_start, asset_last_submission_end
