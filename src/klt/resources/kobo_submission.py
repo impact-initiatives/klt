@@ -41,6 +41,7 @@ def make_submission_time_hint(
     hint_params = {
         "cursor_path": "_submission_time",
         "initial_value": initial_value,
+        "on_cursor_value_missing": "raise",
     }
     if end_value is not None:
         hint_params["end_value"] = end_value
