@@ -1,12 +1,51 @@
 from datetime import datetime
 
 import typer
+from dateutil.relativedelta import relativedelta
 
 from klt.kobotoolbox_pipeline import load_kobo
 
 from .kobotoolbox_pipeline import pipeline
 
 app = typer.Typer()
+
+
+@app.command()
+def demo():
+    """
+    Run the KoboToolbox data pipeline on small monthly ranges sequentially.
+
+    Loads data in monthly chunks from January 2018 to December 2025.
+    Each range covers one month (e.g., Jan 2018, Jan 2019, etc.).
+    Keeps submission resource dates untouched.
+    """
+    base_submission_date = datetime(year=2000, month=1, day=1)
+
+    # Define the demo ranges: January of each year from 2018 to 2025
+    start_year = 2023
+    end_year = 2025
+
+    for year in range(start_year, end_year + 1):
+        # Load data for January of each year
+        range_start = datetime(year=year, month=1, day=1)
+        range_end = range_start + relativedelta(months=1)
+
+        print(
+            f"Loading data for range: {range_start.strftime('%B %Y')} to {range_end.strftime('%B %Y')}"
+        )
+
+        _ = load_kobo(
+            # Keep submission resource dates untouched
+            submission_time_start=base_submission_date,
+            submission_time_end=None,
+            # Apply monthly ranges to asset filters
+            asset_last_submission_start=range_start,
+            asset_last_submission_end=range_end,
+            asset_modified_start=range_start,
+            asset_modified_end=range_end,
+        )
+
+        print(f"Completed loading for {range_start.strftime('%B %Y')}\n")
 
 
 @app.command()
