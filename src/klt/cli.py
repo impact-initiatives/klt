@@ -22,8 +22,8 @@ def demo():
     base_submission_date = datetime(year=2000, month=1, day=1)
 
     # Define the demo ranges: January of each year from 2018 to 2025
-    start_year = 2023
-    end_year = 2025
+    start_year = 2020
+    end_year = 2022
 
     for year in range(start_year, end_year + 1):
         # Load data for January of each year
