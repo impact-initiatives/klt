@@ -122,7 +122,7 @@ def transform_submission_data(data: dict):
     if "_id" not in val:
         logger.warning(
             f"Submission missing _id field. "
-            f"_uuid={val.get('_uuid')}, asset_uid={val.get('asset_uid')}"
+            f"_uuid={data.get('_uuid')}, asset_uid={data.get('asset_uid')}"
         )
 
     return val
