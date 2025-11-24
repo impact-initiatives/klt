@@ -27,7 +27,7 @@ def test_transform_submission_data_preserves_id_field():
 
 
 def test_transform_submission_data_with_empty_id():
-    """Test that empty _id field is handled properly."""
+    """Test that empty _id field is converted to None."""
     input_data = {
         "_id": "",  # Empty string
         "_uuid": "bddf6675-03ae-4b7a-abc1-123456789abc",
@@ -36,12 +36,13 @@ def test_transform_submission_data_with_empty_id():
 
     result = transform_submission_data(input_data)
 
-    # _id should be in result even if empty
+    # Empty string _id should be converted to None to avoid PostgreSQL COPY errors
     assert "_id" in result
+    assert result["_id"] is None
 
 
 def test_transform_submission_data_with_none_id():
-    """Test that None _id field is handled properly."""
+    """Test that None _id field is preserved."""
     input_data = {
         "_id": None,
         "_uuid": "bddf6675-03ae-4b7a-abc1-123456789abc",
@@ -50,8 +51,9 @@ def test_transform_submission_data_with_none_id():
 
     result = transform_submission_data(input_data)
 
-    # _id should be in result even if None
+    # _id should be in result and remain None
     assert "_id" in result
+    assert result["_id"] is None
 
 
 def test_transform_submission_data_separates_metadata_and_questions():

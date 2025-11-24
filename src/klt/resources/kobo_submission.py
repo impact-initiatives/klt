@@ -4,6 +4,7 @@ import dlt
 import orjson
 from dlt.sources.helpers.rest_client.client import RESTClient
 
+from klt.logging import logger
 from klt.utils import make_kobo_pipeline_hooks, parse_timestamps
 
 submission_hooks = make_kobo_pipeline_hooks(
@@ -63,7 +64,7 @@ def make_resource_kobo_submission(
         data_from=kobo_asset,
         parallelized=False,
         name="kobo_submission",
-        primary_key=["_id", "_uuid"],
+        primary_key="_uuid",  # Use only _uuid as primary key since _id can be missing
     )
     def kobo_submission(
         asset,
@@ -81,7 +82,10 @@ def make_resource_kobo_submission(
 
     kobo_submission.add_map(parse_timestamps)
     kobo_submission.add_map(transform_submission_data)
-    kobo_submission.apply_hints(incremental=submission_time_hint)
+    kobo_submission.apply_hints(
+        incremental=submission_time_hint,
+        columns={"_id": {"nullable": True}},  # Allow NULL _id values
+    )
     return kobo_submission
 
 
@@ -97,11 +101,28 @@ def transform_submission_data(data: dict):
 
         # Keep metadata fields in the main table
         if key.startswith("_"):
-            val[key] = value
+            # Special handling for _id: convert empty string to None
+            # Empty strings cause PostgreSQL COPY to fail when column is typed as bigint
+            if key == "_id" and value == "":
+                val[key] = None
+                logger.warning(
+                    f"Submission has empty _id field (converted to NULL). "
+                    f"_uuid={data.get('_uuid')}, asset_uid={data.get('asset_uid')}"
+                )
+            else:
+                val[key] = value
         else:
             # Question field - convert lists to JSON
             response = orjson.dumps(value) if isinstance(value, list) else value
             eav.append({"question": key, "response": response})
 
     val["responses"] = eav
+    
+    # Log if _id is completely missing
+    if "_id" not in val:
+        logger.warning(
+            f"Submission missing _id field. "
+            f"_uuid={val.get('_uuid')}, asset_uid={val.get('asset_uid')}"
+        )
+    
     return val
