@@ -1,9 +1,8 @@
 """Integration test for kobo_submission with DLT pipeline."""
 
 import dlt
-import duckdb
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from dlt.sources.helpers.rest_client.client import RESTClient
 
 
@@ -41,11 +40,11 @@ def test_kobo_submission_preserves_id_through_dlt(
 
     # Mock the REST client
     mock_client = MagicMock(spec=RESTClient)
-    
+
     # Mock the paginate method to return our test data
-    mock_client.paginate.return_value = [[
-        item for item in mock_kobo_api_responses["results"]
-    ]]
+    mock_client.paginate.return_value = [
+        [item for item in mock_kobo_api_responses["results"]]
+    ]
 
     # Mock kobo_asset resource
     @dlt.resource(name="kobo_asset_for_submissions", selected=False)
@@ -62,20 +61,20 @@ def test_kobo_submission_preserves_id_through_dlt(
 
     # Run the pipeline
     info = kobo_pipeline.run(kobo_submission)
-    
+
     # Verify the load was successful
     assert info.has_failed_jobs is False
-    
+
     # Query the database to check if _id was preserved
     with kobo_pipeline.sql_client() as client:
         with client.execute_query(
             "SELECT _id, _uuid FROM kobo_submission ORDER BY _id"
         ) as cursor:
             rows = cursor.fetchall()
-            
+
     # Verify we have the expected rows
     assert len(rows) == 2
-    
+
     # Verify _id values are present and correct
     assert rows[0][0] == 123456
     assert rows[0][1] == "test-uuid-1"

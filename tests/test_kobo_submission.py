@@ -1,6 +1,5 @@
 """Tests for kobo_submission resource transformation."""
 
-import pytest
 from klt.resources.kobo_submission import transform_submission_data
 
 

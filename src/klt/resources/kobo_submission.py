@@ -117,12 +117,12 @@ def transform_submission_data(data: dict):
             eav.append({"question": key, "response": response})
 
     val["responses"] = eav
-    
+
     # Log if _id is completely missing
     if "_id" not in val:
         logger.warning(
             f"Submission missing _id field. "
             f"_uuid={val.get('_uuid')}, asset_uid={val.get('asset_uid')}"
         )
-    
+
     return val

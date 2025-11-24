@@ -1,6 +1,5 @@
 """Test to verify handling of submissions with missing _id."""
 
-import pytest
 from klt.resources.kobo_submission import transform_submission_data
 
 
@@ -11,9 +10,9 @@ def test_transform_with_missing_id_key():
         "_submission_time": "2021-06-29T10:30:00Z",
         "question1": "answer1",
     }
-    
+
     result = transform_submission_data(input_data)
-    
+
     # _id should not be in result if not in input
     assert "_id" not in result
     assert "_uuid" in result
@@ -27,13 +26,15 @@ def test_transform_handles_falsy_id_values():
         (None, None),  # None preserved
         (False, False),  # Boolean False is valid (though unusual)
     ]
-    
+
     for input_val, expected_val in test_cases:
         input_data = {
             "_id": input_val,
             "_uuid": "test-uuid",
         }
         result = transform_submission_data(input_data)
-        
+
         assert "_id" in result
-        assert result["_id"] == expected_val, f"Failed for input {input_val!r}: got {result['_id']!r}, expected {expected_val!r}"
+        assert result["_id"] == expected_val, (
+            f"Failed for input {input_val!r}: got {result['_id']!r}, expected {expected_val!r}"
+        )
