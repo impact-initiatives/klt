@@ -86,7 +86,42 @@ def make_resource_kobo_submission(
 
 
 def transform_submission_data(data: dict):
-    excluded = frozenset(["_geolocation", "_downloads", "_validation_status"])
+    """Transform submission data into EAV (Entity-Attribute-Value) structure.
+
+    Separates KoboToolbox metadata fields from survey question responses.
+    Metadata fields are preserved as top-level keys, while question responses
+    are normalized into a 'responses' array for flexible querying.
+
+    Parameters
+    ----------
+    data : dict
+        Raw submission data from KoboToolbox API
+
+    Returns
+    -------
+    dict
+        Transformed submission with:
+        - Metadata fields as top-level keys
+        - 'responses' array containing {question, response} pairs
+        - Complex values (lists/dicts) serialized as JSON strings
+
+    Notes
+    -----
+    - Excluded fields (_downloads, _validation_status) are dropped
+    - List and dict values are JSON-serialized for storage
+    """
+    excluded = frozenset(["_downloads", "_validation_status"])
+    metadata_fields = frozenset(
+        [
+            "_id",
+            "_submission_time",
+            "_uuid",
+            "_submitted_by",
+            "__version__",
+            "asset_uid",
+            "_geolocation",
+        ]
+    )
 
     val = {}
     eav = []
@@ -95,12 +130,14 @@ def transform_submission_data(data: dict):
         if key in excluded:
             continue
 
-        # Keep metadata fields in the main table
-        if key.startswith("_"):
+        if key in metadata_fields:
             val[key] = value
         else:
-            # Question field - convert lists to JSON
-            response = orjson.dumps(value) if isinstance(value, list) else value
+            # Serialize complex types (lists, dicts) as JSON strings
+            if isinstance(value, (list, dict)):
+                response = orjson.dumps(value).decode("utf-8")
+            else:
+                response = value
             eav.append({"question": key, "response": response})
 
     val["responses"] = eav
