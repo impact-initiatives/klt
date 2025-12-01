@@ -1,0 +1,116 @@
+name: Bug Report
+description: Report a bug in the KoboToolbox data pipeline
+title: "[BUG] "
+labels: ["bug", "status:needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us investigate.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How critical is this issue?
+      options:
+        - Low - Minor issue
+        - Medium - Normal priority
+        - High - Important but not blocking
+        - Critical - Data loss risk or production blocking
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Pipeline Component
+      description: Which component is affected?
+      multiple: true
+      options:
+        - kobo_asset resource
+        - kobo_submission resource
+        - kobo_attachment resource
+        - kobo_view resource
+        - Data transformation (EAV)
+        - REST API client
+        - Incremental loading / cursor
+        - CLI
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Provide environment details
+      value: |
+        - Python version:
+        - dlt version:
+        - KoboToolbox server version:
+        - Destination (DuckDB/Postgres/Other):
+        - Pipeline config (parallelized, write_disposition):
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happens?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Provide detailed steps to reproduce the issue
+      placeholder: |
+        1. Configure pipeline with...
+        2. Run with assets...
+        3. Observe that...
+    validations:
+      required: true
+
+  - type: textarea
+    id: pipeline_state
+    attributes:
+      label: Pipeline State
+      description: Provide cursor values, state information if relevant
+      placeholder: |
+        - Cursor value before run:
+        - Cursor value after run:
+        - Assets processed:
+        - Rows expected vs actual:
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste relevant log output
+      render: shell
+
+  - type: checkboxes
+    id: data_loss
+    attributes:
+      label: Data Loss Risk
+      description: Could this bug result in missing or lost data?
+      options:
+        - label: Yes, this could cause data loss
+        - label: No data loss risk identified
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that might be helpful

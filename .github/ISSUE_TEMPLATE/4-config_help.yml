@@ -1,0 +1,93 @@
+name: Configuration Help
+description: Get help with pipeline setup or configuration
+title: "[CONFIG] "
+labels: ["question", "status:needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Need help configuring the KoboToolbox pipeline? We're here to help!
+
+  - type: dropdown
+    id: setup_stage
+    attributes:
+      label: Setup Stage
+      description: What stage are you at?
+      options:
+        - Initial setup (first time running)
+        - Migration from another tool
+        - Performance tuning
+        - Adding new resources
+        - Troubleshooting configuration
+        - Best practices question
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: destination
+    attributes:
+      label: Destination
+      description: Where are you loading data?
+      options:
+        - DuckDB
+        - PostgreSQL
+        - Other SQL database
+        - Haven't decided yet
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_config
+    attributes:
+      label: Current Configuration
+      description: Share your current pipeline configuration (remove sensitive data)
+      placeholder: |
+        ```toml
+        # From .dlt/config.toml
+        [sources.kobotoolbox]
+        # Your config here...
+        ```
+      render: toml
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question / Issue
+      description: What do you need help with?
+      placeholder: |
+        Describe your question or configuration issue...
+
+        Examples:
+        - How do I configure incremental loading?
+        - Should I use parallelized=True or False?
+        - What's the difference between write_disposition merge and replace?
+        - How do I set up the cursor for my use case?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: What are you trying to achieve?
+      placeholder: |
+        - Data volume: (e.g., 100 assets, 50K submissions)
+        - Update frequency: (e.g., hourly, daily, weekly)
+        - Special requirements: (e.g., historical data, real-time sync)
+
+  - type: textarea
+    id: what_tried
+    attributes:
+      label: What Have You Tried?
+      description: Have you attempted any solutions already?
+      placeholder: |
+        - Configurations tested:
+        - Error messages encountered:
+        - Documentation referenced:
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information

@@ -1,0 +1,94 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[FEATURE] "
+labels: ["enhancement", "status:needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please provide as much detail as possible.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component would this affect?
+      multiple: true
+      options:
+        - Resource (kobo_asset, kobo_submission, etc.)
+        - Model / Data validation
+        - Transformation logic
+        - API client
+        - CLI interface
+        - Pipeline orchestration
+        - Tests
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: Why is this feature needed? What problem does it solve?
+      placeholder: Describe the scenario where this feature would be useful...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like this to work?
+      placeholder: |
+        Describe the technical approach or API you'd like to see...
+
+        Example:
+        - Add a new parameter `include_archived` to kobo_asset resource
+        - Default to False for backward compatibility
+        - When True, include assets with deployment_status='archived'
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered other approaches?
+      placeholder: Describe alternative solutions you've thought about...
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Breaking Changes
+      description: Would this introduce breaking changes?
+      options:
+        - No breaking changes
+        - Yes - would require migration
+        - Unknown / Need discussion
+    validations:
+      required: true
+
+  - type: textarea
+    id: breaking_details
+    attributes:
+      label: Breaking Changes Details
+      description: If yes, describe the impact and potential migration path
+      placeholder: |
+        - What would break?
+        - How could users migrate?
+        - Deprecation strategy?
+
+  - type: textarea
+    id: kobo_api
+    attributes:
+      label: KoboToolbox API Version
+      description: Is this specific to a KoboToolbox API version or feature?
+      placeholder: e.g., KoboToolbox v2.023.45, or "API supports this since version X"
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information, mockups, or examples

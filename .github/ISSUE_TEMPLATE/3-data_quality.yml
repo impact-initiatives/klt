@@ -1,0 +1,132 @@
+name: Data Quality Issue
+description: Report missing, incorrect, or inconsistent data
+title: "[DATA] "
+labels: ["data-quality", "status:needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report data quality issues including missing data, duplicates, or incorrect transformations.
+
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: Issue Type
+      description: What kind of data quality issue is this?
+      options:
+        - Missing data / Data loss
+        - Duplicate data
+        - Incorrect transformation
+        - Cursor issue (incremental loading)
+        - Data inconsistency
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: resource
+    attributes:
+      label: Affected Resource
+      description: Which resource is affected?
+      multiple: true
+      options:
+        - kobo_asset
+        - kobo_submission
+        - kobo_attachment
+        - kobo_view
+        - All resources
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: time_range
+    attributes:
+      label: Time Range
+      description: When was the pipeline run? What time period of data is affected?
+      placeholder: |
+        - Pipeline run date(s):
+        - Data period affected:
+        - First noticed:
+    validations:
+      required: true
+
+  - type: textarea
+    id: assets_affected
+    attributes:
+      label: Assets Affected
+      description: Which asset UIDs are affected? (anonymize if needed)
+      placeholder: |
+        - Asset UIDs: (e.g., abc123xyz, def456uvw)
+        - Number of assets affected:
+        - Pattern observed:
+
+  - type: textarea
+    id: cursor_state
+    attributes:
+      label: Cursor State
+      description: Provide cursor values before and after the run
+      placeholder: |
+        Before run:
+        - date_modified cursor:
+        - _submission_time cursor:
+
+        After run:
+        - date_modified cursor:
+        - _submission_time cursor:
+      render: yaml
+
+  - type: textarea
+    id: detection
+    attributes:
+      label: Detection Method
+      description: How did you discover this issue? Include queries if applicable
+      placeholder: |
+        SQL query showing the issue:
+        ```sql
+        SELECT COUNT(*) FROM kobo_asset WHERE ...
+        ```
+
+        Or describe manual discovery process...
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_vs_actual
+    attributes:
+      label: Expected vs Actual
+      description: What data was expected vs what was found?
+      placeholder: |
+        Expected: 500 submissions for asset abc123xyz
+        Actual: 350 submissions loaded
+        Missing: 150 submissions from 2024-11-15 to 2024-11-20
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What is the business/operational impact?
+      placeholder: |
+        - Reports are incomplete
+        - Decision-making affected
+        - Compliance issue
+        - etc.
+
+  - type: checkboxes
+    id: data_loss_confirmed
+    attributes:
+      label: Data Loss Confirmation
+      description: Has permanent data loss occurred?
+      options:
+        - label: Data is permanently lost (cannot be recovered by re-running)
+        - label: Data can be recovered by re-running the pipeline
+        - label: Unknown
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information, screenshots, or logs
