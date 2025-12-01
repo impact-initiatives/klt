@@ -53,7 +53,7 @@ def make_resource_kobo_submission(
     kobo_asset,
     submission_time_start: datetime,
     submission_time_end: datetime | None = None,
-    page_size: int = 5000,
+    page_size: int = 1000,
 ):
     submission_time_hint = make_submission_time_hint(
         submission_time_start, submission_time_end
