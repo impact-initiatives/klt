@@ -23,5 +23,21 @@
 - `.dlt/config.toml`: DLT configuration and secrets
 - `pytest.ini`: Pytest config with import mode and warning filters
 
+## Git Workflow
+- **IMPORTANT**: Never create commits, issues, pull requests, merge PRs, or merge branches without explicit user confirmation
+- Always draft the commit message or PR description first and wait for user approval before executing
+- When asked to commit changes, follow these steps:
+  1. Run `git status` and `git diff` to show what will be committed
+  2. Draft a commit message and present it to the user
+  3. Wait for confirmation before running `git commit`
+- When asked to create a PR:
+  1. Draft the PR title and body based on the PR template
+  2. Present the draft to the user
+  3. Wait for confirmation before running `gh pr create`
+- When asked to merge a PR or branch:
+  1. Show the PR/branch details and changes
+  2. Present merge strategy (squash, merge commit, rebase) and confirm with user
+  3. Wait for explicit confirmation before running merge commands
+
 ## Tools
 - When working with DLT pipelines, querying pipeline metadata, or analyzing data, use the `dlt` MCP tools
