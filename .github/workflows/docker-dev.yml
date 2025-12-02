@@ -1,12 +1,10 @@
 name: Docker Dev (Hub)
 
-run-name: Build & push dev image
-
 on:
   push:
     branches:
       - develop
-      - container-klt-execution
+      - containerize-klt-execution
   workflow_dispatch:
 
 env:

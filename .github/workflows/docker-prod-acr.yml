@@ -6,7 +6,7 @@ on:
   push:
     branches:
       - main
-      - container-klt-execution
+      - containerize-klt-execution
   workflow_dispatch:
 
 env:
