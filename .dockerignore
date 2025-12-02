@@ -44,6 +44,5 @@ htmlcov/
 # Mac
 .DS_Store
 
-
 # Documentation (keep README.md for hatchling build)
 # README.md is required by pyproject.toml during package build
