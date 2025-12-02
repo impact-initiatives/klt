@@ -1,4 +1,6 @@
-name: Build and Push Docker Image to Docker Hub
+name: Docker Dev (Hub)
+
+run-name: Build & push dev image
 
 on:
   push:

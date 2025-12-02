@@ -1,4 +1,6 @@
-name: Build and Push Docker Image to Azure Container Registry
+name: Docker Prod (ACR)
+
+run-name: Build & push prod image
 
 on:
   push:
