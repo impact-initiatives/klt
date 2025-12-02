@@ -18,6 +18,8 @@ dlt_pipelines
 
 # Log files
 *.log
+http_logs*
+dlt_loguru.*
 
 # marimo
 __marimo__/
@@ -25,3 +27,19 @@ __marimo__/
 # hypothesis
 .hypothesis/
 http_cache.sqlite
+
+# .continue
+.continue/*
+
+# dev & debug folders
+dev/*
+debug/*
+
+# data folder
+data/*
+
+# Env
+.env*
+
+# MacOS files
+.DS_Store
