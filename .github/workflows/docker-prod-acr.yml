@@ -1,12 +1,10 @@
 name: Docker Prod (ACR)
-
 run-name: Build & push prod image
 
 on:
   push:
     branches:
       - main
-      - containerize-klt-execution
   workflow_dispatch:
 
 env:
