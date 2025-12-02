@@ -13,7 +13,7 @@ from dlt.sources.helpers.rest_client.client import RESTClient
 from klt.utils import make_kobo_pipeline_hooks, parse_timestamps
 
 asset_hooks = make_kobo_pipeline_hooks(
-    ignored_http_status_codes=[404, 502], enable_http_logging=True
+    ignored_http_status_codes=[404], enable_http_logging=True
 )
 
 
@@ -57,7 +57,7 @@ def make_resource_kobo_asset(
     The resource automatically:
     - Parses ISO timestamp fields to datetime objects
     - Filters out assets with zero submissions
-    - Handles 404 and 502 HTTP errors gracefully via hooks
+    - Handles 404 HTTP error gracefully via hooks
     - Prevents HTTP redirects during pagination
     """
 
@@ -123,7 +123,7 @@ def make_resource_kobo_asset_content(
     - Extracts the asset UID from each parent asset record
     - Fetches content from /api/v2/assets/{asset_uid}/content/ endpoint
     - Parses ISO timestamp fields to datetime objects
-    - Handles 404 and 502 HTTP errors gracefully via hooks
+    - Handles 404 HTTP error gracefully via hooks
 
     This resource is designed to work with make_resource_kobo_asset and
     should receive a kobo_asset resource instance as the data source.

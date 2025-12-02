@@ -30,7 +30,7 @@ def make_kobo_pipeline_hooks(
         These are appended after logging and ignored status code actions.
     ignored_http_status_codes : list[int] | None, default=None
         HTTP status codes to ignore (suppress errors for). Common values
-        include 404 (not found) and 502 (bad gateway) for KoboToolbox APIs.
+        include 404 (not found) for KoboToolbox APIs.
     enable_http_logging : bool, default=True
         Whether to enable HTTP request/response logging via the http_log hook.
 

@@ -7,7 +7,7 @@ from dlt.sources.helpers.rest_client.client import RESTClient
 from klt.utils import make_kobo_pipeline_hooks, parse_timestamps
 
 submission_hooks = make_kobo_pipeline_hooks(
-    ignored_http_status_codes=[404, 502], enable_http_logging=True
+    ignored_http_status_codes=[404], enable_http_logging=True
 )
 
 
