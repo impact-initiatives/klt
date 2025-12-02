@@ -1,0 +1,48 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# DLT runtime files (generated at runtime)
+.dlt/secrets.toml
+dlt_pipelines/
+*.duckdb
+*.duckdb.wal
+
+# Logs
+http_logs/
+*.log
+dlt_loguru.log
+
+# Development
+dev/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Git
+.git/
+.gitignore
+
+# Mac
+.DS_Store
+
+# Documentation (keep README.md for hatchling build)
+# README.md is required by pyproject.toml during package build
