@@ -26,6 +26,7 @@ __all__ = [
     "db",
     "kobo_pipeline",
     "kobo_client",
+    "kobo_client_no_retry",
     "make_asset_data",
     "make_submission_data",
     "make_drf_response",
@@ -93,4 +94,40 @@ def kobo_client():
     return make_rest_client(
         kobo_token="test_token_12345",
         kobo_server="https://kf.kobotoolbox.org",
+    )
+
+
+@pytest.fixture(scope="function")
+def kobo_client_no_retry():
+    """Provide a KoboToolbox REST client with retries disabled for fast error testing.
+
+    This fixture creates a REST client with a custom session that has all retries
+    disabled, allowing HTTP error tests to fail fast without waiting for retry delays.
+
+    Returns:
+        RESTClient configured for KoboToolbox API with no retry logic
+    """
+    from requests import Session
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
+
+    # Create session with absolutely no retries
+    session = Session()
+    retry_strategy = Retry(
+        total=0,
+        connect=0,
+        read=0,
+        status=0,
+        redirect=0,
+        backoff_factor=0,
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
+    return make_rest_client(
+        kobo_token="test_token_12345",
+        kobo_server="https://kf.kobotoolbox.org",
+        session=session,
     )
