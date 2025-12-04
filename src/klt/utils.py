@@ -4,11 +4,14 @@ Provides hooks for HTTP response handling and timestamp parsing for
 KoboToolbox API data.
 """
 
-from typing import Any
+from datetime import datetime
+from itertools import pairwise
+from typing import Any, Iterable, Literal
 
 import pendulum
 from dlt.sources.rest_api.config_setup import create_response_hooks
 from dlt.sources.rest_api.typing import ResponseAction
+from pendulum import DateTime, Interval
 
 from .logging import http_log, logger
 
@@ -110,3 +113,80 @@ def parse_timestamps(item: dict[str, Any]) -> dict[str, Any]:
                     f"in asset {item.get('uid')}: {e}"
                 )
     return item
+
+
+def make_time_batches(
+    start: datetime,
+    end: datetime,
+    chunk_size: Literal["years", "months", "weeks", "days", "hours"],
+) -> Iterable[tuple[DateTime, DateTime]]:
+    """Generate datetime chunk pairs for batching operations.
+
+    Creates consecutive non-overlapping datetime intervals from start to end,
+    divided by the specified chunk size. Ensures the final chunk reaches
+    exactly the end datetime.
+
+    Parameters
+    ----------
+    start : datetime
+        Beginning of the time range (inclusive). Must be before end.
+    end : datetime
+        End of the time range (inclusive). Must be after start.
+    chunk_size : Literal["years", "months", "weeks", "days", "hours"]
+        Size of each time chunk.
+
+    Returns
+    -------
+    Iterable[tuple[DateTime, DateTime]]
+        Iterator of (chunk_start, chunk_end) pairs covering [start, end].
+        Each pair represents a non-overlapping time interval where
+        chunk_start < chunk_end (strictly increasing).
+
+    Raises
+    ------
+    ValueError
+        If start >= end.
+
+    Notes
+    -----
+    Timezone Handling:
+        - Naive datetimes are localized to system local timezone
+        - Timezone-aware datetimes preserve their original timezone
+        - Mixed timezones are supported; pendulum handles cross-timezone comparison
+
+    Edge Cases:
+        - If range < chunk_size: Returns single interval from start to end
+        - If end not aligned to chunk boundary: Final chunk adjusted to reach end exactly
+
+    Examples
+    --------
+    >>> import pendulum
+    >>> start = pendulum.datetime(2000, 1, 1, tz="UTC")
+    >>> end = pendulum.datetime(2000, 1, 20, tz="UTC")
+    >>> list(make_time_batches(start, end, "weeks"))
+    [
+        (DateTime(2000-01-01 00:00:00+00:00), DateTime(2000-01-08 00:00:00+00:00)),
+        (DateTime(2000-01-08 00:00:00+00:00), DateTime(2000-01-15 00:00:00+00:00)),
+        (DateTime(2000-01-15 00:00:00+00:00), DateTime(2000-01-20 00:00:00+00:00))
+    ]
+    """
+
+    def to_pendulum(dt: datetime) -> DateTime:
+        """Convert to pendulum DateTime, preserving tz or using local tz fallback."""
+        if dt.tzinfo is None:
+            return pendulum.instance(dt, tz=pendulum.local_timezone())
+        return pendulum.instance(dt)
+
+    start_ = to_pendulum(start)
+    end_ = to_pendulum(end)
+
+    if start_ >= end_:
+        raise ValueError(f"start ({start_}) must be before end ({end_})")
+
+    batching_interval: Interval[DateTime] = pendulum.interval(start_, end_)
+    batching_ranges: list[DateTime] = list(
+        batching_interval.range(unit=chunk_size, amount=1)
+    )
+    if max(batching_ranges) < end_:
+        batching_ranges.append(end_)
+    return pairwise(batching_ranges)
