@@ -6,9 +6,11 @@ Also exports factory functions for test data generation.
 
 import pathlib
 from typing import Any, Generator
+from unittest.mock import patch
 
 import dlt
 import duckdb
+import pendulum
 import pytest
 
 from klt.rest_client import make_rest_client
@@ -32,6 +34,9 @@ __all__ = [
     "make_drf_response",
     "make_project_view_assets_url",
     "make_asset_submissions_url",
+    "mock_make_time_batches",
+    "mock_load_kobo",
+    "sample_batch_ranges",
 ]
 
 
@@ -131,3 +136,27 @@ def kobo_client_no_retry():
         kobo_server="https://kf.kobotoolbox.org",
         session=session,
     )
+
+
+@pytest.fixture
+def mock_make_time_batches():
+    """Mock make_time_batches utility."""
+    with patch("klt.cli.make_time_batches") as mock:
+        yield mock
+
+
+@pytest.fixture
+def mock_load_kobo():
+    """Mock load_kobo pipeline function."""
+    with patch("klt.cli.load_kobo") as mock:
+        yield mock
+
+
+@pytest.fixture
+def sample_batch_ranges():
+    """Sample pendulum DateTime batch pairs for testing."""
+    return [
+        (pendulum.datetime(2020, 1, 1), pendulum.datetime(2020, 2, 1)),
+        (pendulum.datetime(2020, 2, 1), pendulum.datetime(2020, 3, 1)),
+        (pendulum.datetime(2020, 3, 1), pendulum.datetime(2020, 4, 1)),
+    ]
