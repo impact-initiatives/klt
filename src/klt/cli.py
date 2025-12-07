@@ -81,6 +81,9 @@ def batch(
     submission_baseline = datetime(1970, 1, 1)
     submission_end = pendulum.now()
 
+    # Track if any batch failed
+    failed = False
+
     # Process batches with progress tracking
     for idx, (batch_start, batch_end) in enumerate(
         track(batching_ranges, description="Processing batches..."), start=1
@@ -89,14 +92,26 @@ def batch(
             f"Batch {idx}/{total_batches}: {batch_start.to_datetime_string()} → {batch_end.to_datetime_string()}"
         )
 
-        load_kobo(
-            submission_time_start=submission_baseline,
-            submission_time_end=submission_end,
-            asset_last_submission_start=batch_start,
-            asset_last_submission_end=batch_end,
-            asset_modified_start=batch_start,
-            asset_modified_end=batch_end,
-        )
+        try:
+            load_kobo(
+                submission_time_start=submission_baseline,
+                submission_time_end=submission_end,
+                asset_last_submission_start=batch_start,
+                asset_last_submission_end=batch_end,
+                asset_modified_start=batch_start,
+                asset_modified_end=batch_end,
+            )
+        except Exception as e:
+            failed = True
+            logger.error(
+                f"Batch {idx}/{total_batches} failed "
+                f"({batch_start.to_datetime_string()} → {batch_end.to_datetime_string()}): {e}",
+                exc_info=True,
+            )
+
+    # Exit with error code if any batch failed
+    if failed:
+        raise typer.Exit(code=1)
 
 
 @dlt_run_app.command()
