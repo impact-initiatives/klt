@@ -11,7 +11,6 @@ import typer
 
 from klt.cli import batch
 
-
 # Group 1: Core Orchestration Tests
 
 
@@ -187,6 +186,8 @@ def test_batch_always_provides_non_null_end_values(
     """Asset end values should never be None (ensures state isolation)."""
     mock_make_time_batches.return_value = sample_batch_ranges
 
+    # NOTE: We only check asset end values. Submission end values use now()
+    # which is always non-None, so no explicit check is needed.
     batch(
         start=datetime(2020, 1, 1),
         end=datetime(2020, 4, 1),
