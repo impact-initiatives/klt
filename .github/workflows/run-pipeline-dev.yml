@@ -90,6 +90,7 @@ jobs:
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.CONTAINER_NAME }} \
             --image ${{ env.IMAGE_NAME }} \
+            --os-type Linux \
             --cpu ${{ vars.AZURE_CONTAINER_CPU || '4' }} \
             --memory ${{ vars.AZURE_CONTAINER_MEMORY || '16' }} \
             --restart-policy Never \
