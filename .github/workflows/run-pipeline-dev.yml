@@ -55,7 +55,7 @@ env:
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'switzerlandnorth' }}
   PIPELINE_NAME: ${{ inputs.pipeline_name || 'klt_dev' }}
-  CONTAINER_NAME: ${{ inputs.pipeline_name || 'klt_dev' }}-${{ github.run_id }}
+  CONTAINER_NAME: ${{ github.run_id }}-${{ inputs.pipeline_name || 'klt-dev' }}
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/klt:dev
 
 jobs:
