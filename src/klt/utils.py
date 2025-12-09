@@ -4,6 +4,7 @@ Provides hooks for HTTP response handling and timestamp parsing for
 KoboToolbox API data.
 """
 
+import os
 from datetime import datetime
 from itertools import pairwise
 from typing import Any, Iterable, Literal
@@ -14,6 +15,37 @@ from dlt.sources.rest_api.typing import ResponseAction
 from pendulum import DateTime, Interval
 
 from .logging import http_log, logger
+
+
+def datetime_from_env(env_var: str) -> datetime | None:
+    """Parse datetime from environment variable or return None if not set.
+
+    Parameters
+    ----------
+    env_var : str
+        Environment variable name to read.
+
+    Returns
+    -------
+    datetime | None
+        Parsed datetime from environment variable, or None if variable is not set,
+        empty, or contains invalid datetime format.
+
+    Notes
+    -----
+    Invalid datetime formats are logged as warnings and treated as missing values.
+    Empty strings and whitespace-only values are treated as missing.
+    """
+    value = os.getenv(env_var)
+    if not value or not value.strip():
+        return None
+    try:
+        return pendulum.parse(value)
+    except Exception:
+        logger.warning(
+            f"Invalid datetime format in {env_var}={value!r}, using default value"
+        )
+        return None
 
 
 def make_kobo_pipeline_hooks(

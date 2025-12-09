@@ -9,7 +9,7 @@ from rich.progress import track
 
 from .kobotoolbox_pipeline import load_kobo
 from .logging import logger
-from .utils import make_time_batches
+from .utils import datetime_from_env, make_time_batches
 
 app = typer.Typer()
 dlt_run_app = typer.Typer(
@@ -154,48 +154,53 @@ def batch(
 @dlt_run_app.command()
 def incremental(
     submission_time_start: datetime = typer.Option(
-        pendulum.now().start_of("day"),
+        datetime_from_env("KLT_SUBMISSION_TIME_START")
+        or pendulum.now().start_of("day"),
         "--submission-time-start",
         help="Initial date for incremental loading of submission data. "
         "Only submissions with _submission_time >= this value will be fetched on first run. "
-        "Defaults to today at 00:00:00.",
+        "Defaults to today at 00:00:00. Can be set via KLT_SUBMISSION_TIME_START env var.",
         rich_help_panel="Incremental Loading",
     ),
     submission_time_end: datetime | None = typer.Option(
-        None,
+        datetime_from_env("KLT_SUBMISSION_TIME_END"),
         "--submission-time-end",
         help="Optional end date for incremental loading of submission data. "
-        "Only submissions with _submission_time < this value will be fetched. ",
+        "Only submissions with _submission_time < this value will be fetched. "
+        "Can be set via KLT_SUBMISSION_TIME_END env var.",
         rich_help_panel="Incremental Loading",
     ),
     asset_last_submission_start: datetime = typer.Option(
-        pendulum.now().start_of("day"),
+        datetime_from_env("KLT_ASSET_LAST_SUBMISSION_START")
+        or pendulum.now().start_of("day"),
         "--asset-last-submission-start",
         help="Initial date for filtering assets by deployment__last_submission_time. "
         "Only assets with a last submission >= this value will be processed on first run. "
-        "Defaults to today at 00:00:00.",
+        "Defaults to today at 00:00:00. Can be set via KLT_ASSET_LAST_SUBMISSION_START env var.",
         rich_help_panel="Incremental Loading",
     ),
     asset_last_submission_end: datetime | None = typer.Option(
-        None,
+        datetime_from_env("KLT_ASSET_LAST_SUBMISSION_END"),
         "--asset-last-submission-end",
         help="Optional end date for filtering assets by deployment__last_submission_time. "
-        "Only assets with a last submission < this value will be processed. ",
+        "Only assets with a last submission < this value will be processed. "
+        "Can be set via KLT_ASSET_LAST_SUBMISSION_END env var.",
         rich_help_panel="Incremental Loading",
     ),
     asset_modified_start: datetime = typer.Option(
-        pendulum.now().start_of("day"),
+        datetime_from_env("KLT_ASSET_MODIFIED_START") or pendulum.now().start_of("day"),
         "--asset-modified-start",
         help="Initial date for filtering assets by date_modified field. "
         "Only assets modified >= this value will be processed on first run. "
-        "Defaults to today at 00:00:00.",
+        "Defaults to today at 00:00:00. Can be set via KLT_ASSET_MODIFIED_START env var.",
         rich_help_panel="Incremental Loading",
     ),
     asset_modified_end: datetime | None = typer.Option(
-        None,
+        datetime_from_env("KLT_ASSET_MODIFIED_END"),
         "--asset-modified-end",
         help="Optional end date for filtering assets by date_modified field. "
-        "Only assets modified < this value will be processed. ",
+        "Only assets modified < this value will be processed. "
+        "Can be set via KLT_ASSET_MODIFIED_END env var.",
         rich_help_panel="Incremental Loading",
     ),
     pipeline_name: str = typer.Option(
