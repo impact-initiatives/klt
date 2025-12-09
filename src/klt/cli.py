@@ -1,13 +1,15 @@
 from datetime import datetime
+import os
 from typing import Literal
 
+import dlt
 import pendulum
 import typer
 from rich.progress import track
 
-from .kobotoolbox_pipeline import load_kobo, pipeline
+from .kobotoolbox_pipeline import load_kobo
 from .logging import logger
-from .utils import make_time_batches
+from .utils import datetime_from_env, make_time_batches
 
 app = typer.Typer()
 dlt_run_app = typer.Typer(
@@ -49,6 +51,36 @@ def batch(
         "months",
         "--chunk-size",
         help="Size of each time batch. The date range [start, end] will be divided into non-overlapping chunks of this size.",
+    ),
+    pipeline_name: str = typer.Option(
+        os.getenv("KLT_PIPELINE_NAME", "klt"),
+        "--pipeline-name",
+        help="Name of the dlt pipeline instance.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    destination: str = typer.Option(
+        os.getenv("KLT_DESTINATION", "duckdb"),
+        "--destination",
+        help="Target destination for loaded data.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    dataset_name: str = typer.Option(
+        os.getenv("KLT_DATASET_NAME", "klt_dataset"),
+        "--dataset-name",
+        help="Name of the dataset/schema.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    write_disposition: str = typer.Option(
+        os.getenv("KLT_WRITE_DISPOSITION", "merge"),
+        "--write-disposition",
+        help="Write disposition: 'merge', 'replace', or 'append'.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    progress: str = typer.Option(
+        os.getenv("KLT_PROGRESS", "log"),
+        "--progress",
+        help="Progress reporting mode.",
+        rich_help_panel="Pipeline Configuration",
     ),
 ):
     """
@@ -100,6 +132,11 @@ def batch(
                 asset_last_submission_end=batch_end,
                 asset_modified_start=batch_start,
                 asset_modified_end=batch_end,
+                pipeline_name=pipeline_name,
+                destination=destination,
+                dataset_name=dataset_name,
+                write_disposition=write_disposition,
+                progress=progress,
             )
         except Exception as e:
             failed = True
@@ -117,46 +154,84 @@ def batch(
 @dlt_run_app.command()
 def incremental(
     submission_time_start: datetime = typer.Option(
-        datetime(year=2000, month=1, day=1),
+        datetime_from_env("KLT_SUBMISSION_TIME_START")
+        or pendulum.now().start_of("day"),
         "--submission-time-start",
         help="Initial date for incremental loading of submission data. "
-        "Only submissions with _submission_time >= this value will be fetched on first run. ",
+        "Only submissions with _submission_time >= this value will be fetched on first run. "
+        "Defaults to today at 00:00:00. Can be set via KLT_SUBMISSION_TIME_START env var.",
         rich_help_panel="Incremental Loading",
     ),
     submission_time_end: datetime | None = typer.Option(
-        None,
+        datetime_from_env("KLT_SUBMISSION_TIME_END"),
         "--submission-time-end",
         help="Optional end date for incremental loading of submission data. "
-        "Only submissions with _submission_time < this value will be fetched. ",
+        "Only submissions with _submission_time < this value will be fetched. "
+        "Can be set via KLT_SUBMISSION_TIME_END env var.",
         rich_help_panel="Incremental Loading",
     ),
     asset_last_submission_start: datetime = typer.Option(
-        datetime(year=2000, month=1, day=1),
+        datetime_from_env("KLT_ASSET_LAST_SUBMISSION_START")
+        or pendulum.now().start_of("day"),
         "--asset-last-submission-start",
         help="Initial date for filtering assets by deployment__last_submission_time. "
-        "Only assets with a last submission >= this value will be processed on first run. ",
+        "Only assets with a last submission >= this value will be processed on first run. "
+        "Defaults to today at 00:00:00. Can be set via KLT_ASSET_LAST_SUBMISSION_START env var.",
         rich_help_panel="Incremental Loading",
     ),
     asset_last_submission_end: datetime | None = typer.Option(
-        None,
+        datetime_from_env("KLT_ASSET_LAST_SUBMISSION_END"),
         "--asset-last-submission-end",
         help="Optional end date for filtering assets by deployment__last_submission_time. "
-        "Only assets with a last submission < this value will be processed. ",
+        "Only assets with a last submission < this value will be processed. "
+        "Can be set via KLT_ASSET_LAST_SUBMISSION_END env var.",
         rich_help_panel="Incremental Loading",
     ),
     asset_modified_start: datetime = typer.Option(
-        datetime(year=2000, month=1, day=1),
+        datetime_from_env("KLT_ASSET_MODIFIED_START") or pendulum.now().start_of("day"),
         "--asset-modified-start",
         help="Initial date for filtering assets by date_modified field. "
-        "Only assets modified >= this value will be processed on first run. ",
+        "Only assets modified >= this value will be processed on first run. "
+        "Defaults to today at 00:00:00. Can be set via KLT_ASSET_MODIFIED_START env var.",
         rich_help_panel="Incremental Loading",
     ),
     asset_modified_end: datetime | None = typer.Option(
-        None,
+        datetime_from_env("KLT_ASSET_MODIFIED_END"),
         "--asset-modified-end",
         help="Optional end date for filtering assets by date_modified field. "
-        "Only assets modified < this value will be processed. ",
+        "Only assets modified < this value will be processed. "
+        "Can be set via KLT_ASSET_MODIFIED_END env var.",
         rich_help_panel="Incremental Loading",
+    ),
+    pipeline_name: str = typer.Option(
+        os.getenv("KLT_PIPELINE_NAME", "klt"),
+        "--pipeline-name",
+        help="Name of the dlt pipeline instance used to store state and logs.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    destination: str = typer.Option(
+        os.getenv("KLT_DESTINATION", "duckdb"),
+        "--destination",
+        help="Target destination for loaded data (postgres, duckdb, bigquery, etc.).",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    dataset_name: str = typer.Option(
+        os.getenv("KLT_DATASET_NAME", "klt_dataset"),
+        "--dataset-name",
+        help="Name of the dataset/schema that will receive the loaded tables.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    write_disposition: str = typer.Option(
+        os.getenv("KLT_WRITE_DISPOSITION", "merge"),
+        "--write-disposition",
+        help="Write disposition: 'merge', 'replace', or 'append'.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    progress: str = typer.Option(
+        os.getenv("KLT_PROGRESS", "log"),
+        "--progress",
+        help="Progress reporting mode: 'log', 'enlighten', or 'alive'.",
+        rich_help_panel="Pipeline Configuration",
     ),
 ):
     """
@@ -165,16 +240,29 @@ def incremental(
     The pipeline performs incremental loading based on the configured initial dates.
     On subsequent runs, it will automatically resume from the last processed timestamps.
     """
-    _ = load_kobo(
+    load_kobo(
         submission_time_start=submission_time_start,
         submission_time_end=submission_time_end,
         asset_last_submission_start=asset_last_submission_start,
         asset_last_submission_end=asset_last_submission_end,
         asset_modified_start=asset_modified_start,
         asset_modified_end=asset_modified_end,
+        pipeline_name=pipeline_name,
+        destination=destination,
+        dataset_name=dataset_name,
+        write_disposition=write_disposition,
+        progress=progress,
     )
 
 
 @app.command()
-def drop():
+def drop(
+    pipeline_name: str = typer.Option(
+        os.getenv("KLT_PIPELINE_NAME", "klt"),
+        "--pipeline-name",
+        help="Name of the dlt pipeline instance to drop.",
+    ),
+):
+    """Drop the pipeline state and data."""
+    pipeline = dlt.pipeline(pipeline_name=pipeline_name)
     pipeline.drop()

@@ -98,14 +98,6 @@ def kobo_source(
     ]
 
 
-pipeline: dlt.Pipeline = dlt.pipeline(
-    pipeline_name="klt",
-    destination="duckdb",
-    dataset_name="klt_dataset",
-    progress="log",
-)
-
-
 def load_kobo(
     submission_time_start: datetime,
     submission_time_end: datetime | None,
@@ -113,7 +105,18 @@ def load_kobo(
     asset_last_submission_end: datetime | None,
     asset_modified_start: datetime,
     asset_modified_end: datetime | None,
+    pipeline_name: str,
+    destination: str,
+    dataset_name: str,
+    write_disposition: str = "merge",
+    progress: str = "log",
 ):
+    pipeline = dlt.pipeline(
+        pipeline_name=pipeline_name,
+        destination=destination,
+        dataset_name=dataset_name,
+        progress=progress,
+    )
     pipeline.run(
         kobo_source(
             submission_time_start=submission_time_start,
@@ -123,7 +126,7 @@ def load_kobo(
             asset_modified_start=asset_modified_start,
             asset_modified_end=asset_modified_end,
         ),
-        write_disposition="merge",
+        write_disposition=write_disposition,
     )
     last_trace = pipeline.last_trace
     pipeline.run([last_trace], table_name="trace", write_disposition="append")
