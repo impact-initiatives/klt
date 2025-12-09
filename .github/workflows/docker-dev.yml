@@ -1,5 +1,5 @@
 name: Docker Dev (Hub)
-run-name: Build & push prod image
+run-name: Build & push dev image
 
 on:
   push:
