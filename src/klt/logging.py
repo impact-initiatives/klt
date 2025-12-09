@@ -1,5 +1,7 @@
 import logging
+import os
 import sys
+from pathlib import Path
 
 import requests
 from loguru import logger
@@ -39,5 +41,14 @@ def http_log(response: requests.Response, *args, **kwargs):
     return response
 
 
-logger.add("dlt.log", filter=lambda record: record["extra"].get("scope") != "http")
-logger.add("dlt_http.log", filter=lambda record: record["extra"].get("scope") == "http")
+# Get log directory from environment or use current directory
+log_dir = Path(os.getenv("LOG_DIR", "."))
+log_dir.mkdir(parents=True, exist_ok=True)
+
+logger.add(
+    log_dir / "dlt.log", filter=lambda record: record["extra"].get("scope") != "http"
+)
+logger.add(
+    log_dir / "dlt_http.log",
+    filter=lambda record: record["extra"].get("scope") == "http",
+)

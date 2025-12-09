@@ -1,0 +1,175 @@
+name: Run KLT Pipeline (Dev)
+run-name: Run incremental pipeline on Azure Container Instance
+
+on:
+  workflow_dispatch:
+    inputs:
+      submission_time_start:
+        description: 'Submission time start (YYYY-MM-DD or ISO 8601)'
+        required: false
+        type: string
+      submission_time_end:
+        description: 'Submission time end (YYYY-MM-DD or ISO 8601)'
+        required: false
+        type: string
+      asset_last_submission_start:
+        description: 'Asset last submission start (YYYY-MM-DD or ISO 8601)'
+        required: false
+        type: string
+      asset_last_submission_end:
+        description: 'Asset last submission end (YYYY-MM-DD or ISO 8601)'
+        required: false
+        type: string
+      asset_modified_start:
+        description: 'Asset modified start (YYYY-MM-DD or ISO 8601)'
+        required: false
+        type: string
+      asset_modified_end:
+        description: 'Asset modified end (YYYY-MM-DD or ISO 8601)'
+        required: false
+        type: string
+      pipeline_name:
+        description: 'Pipeline name'
+        required: false
+        type: string
+        default: 'klt_dev'
+      dataset_name:
+        description: 'Dataset name'
+        required: false
+        type: string
+        default: 'kobo_dev'
+      write_disposition:
+        description: 'Write disposition'
+        required: false
+        type: choice
+        options:
+          - merge
+          - replace
+          - append
+        default: 'merge'
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'switzerlandnorth' }}
+  PIPELINE_NAME: ${{ inputs.pipeline_name || 'klt_dev' }}
+  CONTAINER_NAME: ${{ inputs.pipeline_name || 'klt_dev' }}-${{ github.run_id }}
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/klt:dev
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set environment variables
+        id: set-env
+        run: |
+          # Set pipeline config parameters
+          echo "KLT_PIPELINE_NAME=${{ env.PIPELINE_NAME }}" >> $GITHUB_ENV
+          echo "KLT_DATASET_NAME=${{ inputs.dataset_name }}" >> $GITHUB_ENV
+          echo "KLT_WRITE_DISPOSITION=${{ inputs.write_disposition }}" >> $GITHUB_ENV
+
+          # Set date parameters
+          echo "KLT_SUBMISSION_TIME_START=${{ inputs.submission_time_start }}" >> $GITHUB_ENV
+          echo "KLT_SUBMISSION_TIME_END=${{ inputs.submission_time_end }}" >> $GITHUB_ENV
+          echo "KLT_ASSET_LAST_SUBMISSION_START=${{ inputs.asset_last_submission_start }}" >> $GITHUB_ENV
+          echo "KLT_ASSET_LAST_SUBMISSION_END=${{ inputs.asset_last_submission_end }}" >> $GITHUB_ENV
+          echo "KLT_ASSET_MODIFIED_START=${{ inputs.asset_modified_start }}" >> $GITHUB_ENV
+          echo "KLT_ASSET_MODIFIED_END=${{ inputs.asset_modified_end }}" >> $GITHUB_ENV
+
+      - name: Create Azure Container Instance
+        run: |
+          az container create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --image ${{ env.IMAGE_NAME }} \
+            --cpu ${{ vars.AZURE_CONTAINER_CPU || '4' }} \
+            --memory ${{ vars.AZURE_CONTAINER_MEMORY || '16' }} \
+            --restart-policy Never \
+            --location ${{ env.AZURE_LOCATION }} \
+            --azure-file-volume-account-name ${{ secrets.AZURE_STORAGE_ACCOUNT }} \
+            --azure-file-volume-account-key ${{ secrets.AZURE_STORAGE_KEY }} \
+            --azure-file-volume-share-name ${{ secrets.AZURE_FILE_SHARE }} \
+            --azure-file-volume-mount-path /app/klt_pipelines \
+            --environment-variables \
+              KLT_PIPELINE_NAME="${{ env.KLT_PIPELINE_NAME }}" \
+              KLT_DESTINATION="${{ vars.KLT_DESTINATION || 'postgres' }}" \
+              KLT_DATASET_NAME="${{ env.KLT_DATASET_NAME }}" \
+              KLT_WRITE_DISPOSITION="${{ env.KLT_WRITE_DISPOSITION }}" \
+              KLT_PROGRESS="${{ vars.KLT_PROGRESS || 'log' }}" \
+              KLT_SUBMISSION_TIME_START="${{ env.KLT_SUBMISSION_TIME_START }}" \
+              KLT_SUBMISSION_TIME_END="${{ env.KLT_SUBMISSION_TIME_END }}" \
+              KLT_ASSET_LAST_SUBMISSION_START="${{ env.KLT_ASSET_LAST_SUBMISSION_START }}" \
+              KLT_ASSET_LAST_SUBMISSION_END="${{ env.KLT_ASSET_LAST_SUBMISSION_END }}" \
+              KLT_ASSET_MODIFIED_START="${{ env.KLT_ASSET_MODIFIED_START }}" \
+              KLT_ASSET_MODIFIED_END="${{ env.KLT_ASSET_MODIFIED_END }}" \
+              DLT_DATA_DIR="/app/klt_pipelines" \
+              LOG_DIR="/app/klt_pipelines/logs/${{ env.PIPELINE_NAME }}/${{ github.run_id }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__PORT="${{ secrets.POSTGRES_PORT || '5432' }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__CONNECT_TIMEOUT="${{ vars.POSTGRES_CONNECT_TIMEOUT || '15' }}" \
+            --secure-environment-variables \
+              SOURCES__KOBO_SERVER="${{ secrets.KOBO_SERVER }}" \
+              SOURCES__KOBO_TOKEN="${{ secrets.KOBO_TOKEN }}" \
+              SOURCES__KOBO_PROJECT_VIEW="${{ secrets.KOBO_PROJECT_VIEW }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__DATABASE="${{ secrets.POSTGRES_DATABASE }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__USERNAME="${{ secrets.POSTGRES_USERNAME }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__PASSWORD="${{ secrets.POSTGRES_PASSWORD }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__HOST="${{ secrets.POSTGRES_HOST }}" \
+            --command-line "klt run incremental"
+
+      - name: Wait for container completion
+        run: |
+          echo "⏳ Waiting for container to complete..."
+          while true; do
+            STATE=$(az container show \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --name ${{ env.CONTAINER_NAME }} \
+              --query "instanceView.state" -o tsv)
+
+            echo "Container state: $STATE"
+
+            if [ "$STATE" = "Succeeded" ] || [ "$STATE" = "Failed" ] || [ "$STATE" = "Terminated" ]; then
+              break
+            fi
+
+            sleep 10
+          done
+
+      - name: Get container logs
+        if: always()
+        run: |
+          echo "📋 Container logs:"
+          az container logs \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }}
+
+      - name: Check container exit code
+        if: always()
+        run: |
+          EXIT_CODE=$(az container show \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --query "containers[0].instanceView.currentState.exitCode" -o tsv)
+
+          echo "Container exit code: $EXIT_CODE"
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "❌ Pipeline failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+          echo "✅ Pipeline completed successfully"
+
+      - name: Delete container
+        if: always()
+        run: |
+          az container delete \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --yes
