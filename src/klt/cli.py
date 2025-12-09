@@ -1,11 +1,13 @@
 from datetime import datetime
+import os
 from typing import Literal
 
+import dlt
 import pendulum
 import typer
 from rich.progress import track
 
-from .kobotoolbox_pipeline import load_kobo, pipeline
+from .kobotoolbox_pipeline import load_kobo
 from .logging import logger
 from .utils import make_time_batches
 
@@ -49,6 +51,36 @@ def batch(
         "months",
         "--chunk-size",
         help="Size of each time batch. The date range [start, end] will be divided into non-overlapping chunks of this size.",
+    ),
+    pipeline_name: str = typer.Option(
+        os.getenv("KLT_PIPELINE_NAME", "klt"),
+        "--pipeline-name",
+        help="Name of the dlt pipeline instance.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    destination: str = typer.Option(
+        os.getenv("KLT_DESTINATION", "duckdb"),
+        "--destination",
+        help="Target destination for loaded data.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    dataset_name: str = typer.Option(
+        os.getenv("KLT_DATASET_NAME", "klt_dataset"),
+        "--dataset-name",
+        help="Name of the dataset/schema.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    write_disposition: str = typer.Option(
+        os.getenv("KLT_WRITE_DISPOSITION", "merge"),
+        "--write-disposition",
+        help="Write disposition: 'merge', 'replace', or 'append'.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    progress: str = typer.Option(
+        os.getenv("KLT_PROGRESS", "log"),
+        "--progress",
+        help="Progress reporting mode.",
+        rich_help_panel="Pipeline Configuration",
     ),
 ):
     """
@@ -100,6 +132,11 @@ def batch(
                 asset_last_submission_end=batch_end,
                 asset_modified_start=batch_start,
                 asset_modified_end=batch_end,
+                pipeline_name=pipeline_name,
+                destination=destination,
+                dataset_name=dataset_name,
+                write_disposition=write_disposition,
+                progress=progress,
             )
         except Exception as e:
             failed = True
@@ -158,6 +195,36 @@ def incremental(
         "Only assets modified < this value will be processed. ",
         rich_help_panel="Incremental Loading",
     ),
+    pipeline_name: str = typer.Option(
+        os.getenv("KLT_PIPELINE_NAME", "klt"),
+        "--pipeline-name",
+        help="Name of the dlt pipeline instance used to store state and logs.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    destination: str = typer.Option(
+        os.getenv("KLT_DESTINATION", "duckdb"),
+        "--destination",
+        help="Target destination for loaded data (postgres, duckdb, bigquery, etc.).",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    dataset_name: str = typer.Option(
+        os.getenv("KLT_DATASET_NAME", "klt_dataset"),
+        "--dataset-name",
+        help="Name of the dataset/schema that will receive the loaded tables.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    write_disposition: str = typer.Option(
+        os.getenv("KLT_WRITE_DISPOSITION", "merge"),
+        "--write-disposition",
+        help="Write disposition: 'merge', 'replace', or 'append'.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    progress: str = typer.Option(
+        os.getenv("KLT_PROGRESS", "log"),
+        "--progress",
+        help="Progress reporting mode: 'log', 'enlighten', or 'alive'.",
+        rich_help_panel="Pipeline Configuration",
+    ),
 ):
     """
     Run the KoboToolbox data pipeline to extract and load data.
@@ -165,16 +232,29 @@ def incremental(
     The pipeline performs incremental loading based on the configured initial dates.
     On subsequent runs, it will automatically resume from the last processed timestamps.
     """
-    _ = load_kobo(
+    load_kobo(
         submission_time_start=submission_time_start,
         submission_time_end=submission_time_end,
         asset_last_submission_start=asset_last_submission_start,
         asset_last_submission_end=asset_last_submission_end,
         asset_modified_start=asset_modified_start,
         asset_modified_end=asset_modified_end,
+        pipeline_name=pipeline_name,
+        destination=destination,
+        dataset_name=dataset_name,
+        write_disposition=write_disposition,
+        progress=progress,
     )
 
 
 @app.command()
-def drop():
+def drop(
+    pipeline_name: str = typer.Option(
+        os.getenv("KLT_PIPELINE_NAME", "klt"),
+        "--pipeline-name",
+        help="Name of the dlt pipeline instance to drop.",
+    ),
+):
+    """Drop the pipeline state and data."""
+    pipeline = dlt.pipeline(pipeline_name=pipeline_name)
     pipeline.drop()
