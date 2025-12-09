@@ -32,7 +32,7 @@ on:
         description: 'Pipeline name'
         required: false
         type: string
-        default: 'klt_dev'
+        default: 'klt-dev'
       dataset_name:
         description: 'Dataset name'
         required: false
@@ -54,7 +54,7 @@ on:
 env:
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'switzerlandnorth' }}
-  PIPELINE_NAME: ${{ inputs.pipeline_name || 'klt_dev' }}
+  PIPELINE_NAME: ${{ inputs.pipeline_name || 'klt-dev' }}
   CONTAINER_NAME: ${{ github.run_id }}-${{ inputs.pipeline_name || 'klt-dev' }}
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/klt:dev
 
