@@ -16,6 +16,7 @@ dependencies = [
     "pydantic[email]>=2.12.4",
     "requests-cache>=1.2.1",
     "rich>=14.2.0",
+    "sentry-sdk>=2.47.0",
     "typer>=0.19.2",
 ]
 
