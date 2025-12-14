@@ -25,11 +25,11 @@ def make_submission_time_hint(
     initial_value : datetime
         Starting cursor value for the first incremental load. Submissions with
         _submission_time >= this value will be included. If timezone-naive,
-        will be converted to UTC with a warning.
+        will be converted to local timezone with a warning.
     end_value : datetime | None, optional
         Optional ending cursor value for the incremental load. Submissions with
         _submission_time < this value will be included. If None, no upper bound
-        is applied. If timezone-naive, will be converted to UTC with a warning.
+        is applied. If timezone-naive, will be converted to local timezone with a warning.
 
     Returns
     -------

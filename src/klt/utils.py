@@ -4,6 +4,7 @@ Provides hooks for HTTP response handling and timestamp parsing for
 KoboToolbox API data.
 """
 
+import functools
 import os
 from datetime import datetime
 from itertools import pairwise
@@ -67,6 +68,7 @@ def ensure_timezone_aware(
     def decorator(
         func: Callable[[datetime, datetime | None], Incremental],
     ) -> Callable[[datetime, datetime | None], Incremental]:
+        @functools.wraps(func)
         def wrapper(
             initial_value: datetime, end_value: datetime | None = None
         ) -> Incremental:
