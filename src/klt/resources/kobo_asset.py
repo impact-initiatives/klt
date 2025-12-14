@@ -178,12 +178,12 @@ def make_last_submission_time_hint(
     initial_value : datetime
         Starting cursor value for the first incremental load. Assets with
         deployment__last_submission_time >= this value will be included.
-        If timezone-naive, will be converted to UTC with a warning.
+        If timezone-naive, will be converted to the local timezone with a warning.
     end_value : datetime | None, optional
         Optional ending cursor value for the incremental load. Assets with
         deployment__last_submission_time < this value will be included.
         If None, no upper bound is applied. If timezone-naive, will be
-        converted to UTC with a warning.
+        converted to the local timezone with a warning.
 
     Returns
     -------
@@ -222,11 +222,11 @@ def make_date_modified_hint(
     initial_value : datetime
         Starting cursor value for the first incremental load. Assets with
         date_modified >= this value will be included. If timezone-naive,
-        will be converted to UTC with a warning.
+        will be converted to the local timezone with a warning.
     end_value : datetime | None, optional
         Optional ending cursor value for the incremental load. Assets with
         date_modified < this value will be included. If None, no upper
-        bound is applied. If timezone-naive, will be converted to UTC
+        bound is applied. If timezone-naive, will be converted to the local timezone
         with a warning.
 
     Returns
