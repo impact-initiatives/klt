@@ -4,6 +4,7 @@ Provides fixtures for database connections, pipelines, and API clients.
 Also exports factory functions for test data generation.
 """
 
+import io
 import pathlib
 from typing import Any, Generator
 from unittest.mock import patch
@@ -12,6 +13,7 @@ import dlt
 import duckdb
 import pendulum
 import pytest
+from loguru import logger
 
 from klt.rest_client import make_rest_client
 
@@ -29,6 +31,7 @@ __all__ = [
     "kobo_pipeline",
     "kobo_client",
     "kobo_client_no_retry",
+    "capture_logs",
     "make_asset_data",
     "make_submission_data",
     "make_drf_response",
@@ -160,3 +163,34 @@ def sample_batch_ranges():
         (pendulum.datetime(2020, 2, 1), pendulum.datetime(2020, 3, 1)),
         (pendulum.datetime(2020, 3, 1), pendulum.datetime(2020, 4, 1)),
     ]
+
+
+@pytest.fixture(scope="function")
+def capture_logs() -> Generator[io.StringIO, Any, Any]:
+    """Capture loguru output for test inspection.
+
+    This fixture adds a StringIO sink to loguru's logger and automatically
+    removes it after the test completes. Useful for asserting on log messages
+    or inspecting logging behavior.
+
+    Scope: function - Each test gets a fresh log capture buffer to ensure
+    isolation between tests.
+
+    Yields:
+        StringIO buffer containing all logs from DEBUG level and above
+
+    Example:
+        def test_something(capture_logs):
+            # Your code that logs
+            pipeline.run(resource)
+
+            # Assert on captured logs
+            logs = capture_logs.getvalue()
+            assert "expected message" in logs
+    """
+    log_output = io.StringIO()
+    handler_id = logger.add(log_output, level="DEBUG")
+    try:
+        yield log_output
+    finally:
+        logger.remove(handler_id)
