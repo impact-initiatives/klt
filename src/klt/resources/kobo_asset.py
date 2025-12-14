@@ -7,10 +7,15 @@ from a project view, with optional incremental loading support.
 from datetime import datetime
 
 import dlt
+from dlt.extract.incremental import Incremental
 from dlt.sources import DltResource
 from dlt.sources.helpers.rest_client.client import RESTClient
 
-from klt.utils import make_kobo_pipeline_hooks, parse_timestamps
+from klt.utils import (
+    ensure_timezone_aware,
+    make_kobo_pipeline_hooks,
+    parse_timestamps,
+)
 
 asset_hooks = make_kobo_pipeline_hooks(
     ignored_http_status_codes=[404], enable_http_logging=True
@@ -159,9 +164,10 @@ def make_resource_kobo_asset_content(
     return kobo_asset_content
 
 
+@ensure_timezone_aware()
 def make_last_submission_time_hint(
     initial_value: datetime, end_value: datetime | None = None
-):
+) -> Incremental:
     """Create incremental hint for deployment__last_submission_time cursor.
 
     Enables incremental loading based on the last submission timestamp,
@@ -172,10 +178,12 @@ def make_last_submission_time_hint(
     initial_value : datetime
         Starting cursor value for the first incremental load. Assets with
         deployment__last_submission_time >= this value will be included.
+        If timezone-naive, will be converted to UTC with a warning.
     end_value : datetime | None, optional
         Optional ending cursor value for the incremental load. Assets with
         deployment__last_submission_time < this value will be included.
-        If None, no upper bound is applied.
+        If None, no upper bound is applied. If timezone-naive, will be
+        converted to UTC with a warning.
 
     Returns
     -------
@@ -200,7 +208,10 @@ def make_last_submission_time_hint(
     return dlt.sources.incremental(**hint_params)
 
 
-def make_date_modified_hint(initial_value: datetime, end_value: datetime | None = None):
+@ensure_timezone_aware()
+def make_date_modified_hint(
+    initial_value: datetime, end_value: datetime | None = None
+) -> Incremental:
     """Create incremental hint for date_modified cursor.
 
     Enables incremental loading based on asset modification timestamp,
@@ -210,11 +221,13 @@ def make_date_modified_hint(initial_value: datetime, end_value: datetime | None 
     ----------
     initial_value : datetime
         Starting cursor value for the first incremental load. Assets with
-        date_modified >= this value will be included.
+        date_modified >= this value will be included. If timezone-naive,
+        will be converted to UTC with a warning.
     end_value : datetime | None, optional
         Optional ending cursor value for the incremental load. Assets with
-        date_modified < this value will be included.
-        If None, no upper bound is applied.
+        date_modified < this value will be included. If None, no upper
+        bound is applied. If timezone-naive, will be converted to UTC
+        with a warning.
 
     Returns
     -------
