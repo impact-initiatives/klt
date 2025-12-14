@@ -17,6 +17,8 @@ from klt.rest_client import make_rest_client
 
 # Re-export factory functions for convenience in tests
 from .factories import (
+    make_asset_content_data,
+    make_asset_content_url,
     make_asset_data,
     make_asset_submissions_url,
     make_drf_response,
@@ -34,6 +36,8 @@ __all__ = [
     "make_drf_response",
     "make_project_view_assets_url",
     "make_asset_submissions_url",
+    "make_asset_content_data",
+    "make_asset_content_url",
     "mock_make_time_batches",
     "mock_load_kobo",
     "sample_batch_ranges",
