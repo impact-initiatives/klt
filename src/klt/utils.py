@@ -7,9 +7,10 @@ KoboToolbox API data.
 import os
 from datetime import datetime
 from itertools import pairwise
-from typing import Any, Iterable, Literal
+from typing import Any, Callable, Iterable, Literal
 
 import pendulum
+from dlt.extract.incremental import Incremental
 from dlt.sources.rest_api.config_setup import create_response_hooks
 from dlt.sources.rest_api.typing import ResponseAction
 from pendulum import DateTime, Interval
@@ -17,7 +18,84 @@ from pendulum import DateTime, Interval
 from .logging import http_log, logger
 
 
-def datetime_from_env(env_var: str) -> datetime | None:
+def _is_naive(dt: datetime) -> bool:
+    """Check if datetime is timezone-naive."""
+    return dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None
+
+
+def ensure_timezone_aware(
+    tz: str | None = None,
+) -> Callable[
+    [Callable[[datetime, datetime | None], Incremental]],
+    Callable[[datetime, datetime | None], Incremental],
+]:
+    """Decorator factory to convert naive datetimes to timezone-aware.
+
+    Parameters
+    ----------
+    tz : str | None, default=None
+        Timezone to use (e.g., "UTC", "America/New_York").
+        If None, uses local timezone.
+
+    Returns
+    -------
+    Callable
+        Decorator that wraps hint factory functions to convert naive datetimes.
+        The decorator expects functions with signature:
+        (initial_value: datetime, end_value: datetime | None) -> Incremental
+
+    Examples
+    --------
+    >>> @ensure_timezone_aware(tz="UTC")
+    ... def make_hint(initial_value: datetime, end_value: datetime | None = None):
+    ...     return dlt.sources.incremental(initial_value=initial_value, end_value=end_value)
+    ...
+    >>> # Naive datetimes will be converted to UTC with warnings
+    >>> make_hint(datetime(2025, 1, 1))
+
+    Notes
+    -----
+    - Decorator is specifically designed for hint factory functions with
+      initial_value and end_value parameters
+    - Timezone-aware datetimes pass through unchanged
+    - Naive datetimes are converted with a warning logged
+    - Uses local timezone by default if tz parameter is not specified
+    - Type hints ensure the decorator is only used on compatible functions
+    """
+    target_tz = tz if tz is not None else str(pendulum.local_timezone())
+
+    def decorator(
+        func: Callable[[datetime, datetime | None], Incremental],
+    ) -> Callable[[datetime, datetime | None], Incremental]:
+        def wrapper(
+            initial_value: datetime, end_value: datetime | None = None
+        ) -> Incremental:
+            # Convert initial_value if naive
+            converted_initial = initial_value
+            if _is_naive(initial_value):
+                logger.warning(
+                    f"In {func.__name__}: initial_value is timezone-naive ({initial_value}), "
+                    f"converting to {target_tz}"
+                )
+                converted_initial = pendulum.instance(initial_value, tz=target_tz)
+
+            # Convert end_value if naive
+            converted_end = end_value
+            if end_value is not None and _is_naive(end_value):
+                logger.warning(
+                    f"In {func.__name__}: end_value is timezone-naive ({end_value}), "
+                    f"converting to {target_tz}"
+                )
+                converted_end = pendulum.instance(end_value, tz=target_tz)
+
+            return func(converted_initial, converted_end)
+
+        return wrapper
+
+    return decorator
+
+
+def datetime_from_env(env_var: str) -> DateTime | None:
     """Parse datetime from environment variable or return None if not set.
 
     Parameters
@@ -27,7 +105,7 @@ def datetime_from_env(env_var: str) -> datetime | None:
 
     Returns
     -------
-    datetime | None
+    DateTime | None
         Parsed datetime from environment variable, or None if variable is not set,
         empty, or contains invalid datetime format.
 
@@ -40,7 +118,8 @@ def datetime_from_env(env_var: str) -> datetime | None:
     if not value or not value.strip():
         return None
     try:
-        return pendulum.parse(value)
+        # pendulum.parse returns DateTime for ISO 8601 strings
+        return pendulum.parse(value)  # type: ignore
     except Exception:
         logger.warning(
             f"Invalid datetime format in {env_var}={value!r}, using default value"
