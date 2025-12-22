@@ -1,5 +1,4 @@
 from datetime import datetime
-import os
 from typing import Literal
 
 import dlt
@@ -9,7 +8,8 @@ from rich.progress import track
 
 from .kobotoolbox_pipeline import load_kobo
 from .logging import logger
-from .utils import datetime_from_env, make_time_batches
+from .settings import IncrementalSettings, PipelineSettings
+from .utils import make_time_batches
 
 app = typer.Typer()
 dlt_run_app = typer.Typer(
@@ -19,6 +19,10 @@ dlt_run_app = typer.Typer(
     no_args_is_help=False,
 )
 app.add_typer(dlt_run_app)
+
+# Load settings
+pipeline_settings = PipelineSettings()
+incremental_settings = IncrementalSettings()
 
 
 @dlt_run_app.callback()
@@ -53,31 +57,31 @@ def batch(
         help="Size of each time batch. The date range [start, end] will be divided into non-overlapping chunks of this size.",
     ),
     pipeline_name: str = typer.Option(
-        os.getenv("KLT_PIPELINE_NAME", "klt"),
+        pipeline_settings.pipeline_name,
         "--pipeline-name",
         help="Name of the dlt pipeline instance.",
         rich_help_panel="Pipeline Configuration",
     ),
     destination: str = typer.Option(
-        os.getenv("KLT_DESTINATION", "duckdb"),
+        pipeline_settings.destination,
         "--destination",
         help="Target destination for loaded data.",
         rich_help_panel="Pipeline Configuration",
     ),
     dataset_name: str = typer.Option(
-        os.getenv("KLT_DATASET_NAME", "klt_dataset"),
+        pipeline_settings.dataset_name,
         "--dataset-name",
         help="Name of the dataset/schema.",
         rich_help_panel="Pipeline Configuration",
     ),
     write_disposition: str = typer.Option(
-        os.getenv("KLT_WRITE_DISPOSITION", "merge"),
+        pipeline_settings.write_disposition,
         "--write-disposition",
         help="Write disposition: 'merge', 'replace', or 'append'.",
         rich_help_panel="Pipeline Configuration",
     ),
     progress: str = typer.Option(
-        os.getenv("KLT_PROGRESS", "log"),
+        pipeline_settings.progress,
         "--progress",
         help="Progress reporting mode.",
         rich_help_panel="Pipeline Configuration",
@@ -154,24 +158,15 @@ def batch(
 @dlt_run_app.command()
 def incremental(
     submission_time_start: datetime = typer.Option(
-        datetime_from_env("KLT_SUBMISSION_TIME_START")
-        or pendulum.now().start_of("day"),
+        incremental_settings.submission_time_start or pendulum.now().start_of("day"),
         "--submission-time-start",
         help="Initial date for incremental loading of submission data. "
         "Only submissions with _submission_time >= this value will be fetched on first run. "
         "Defaults to today at 00:00:00. Can be set via KLT_SUBMISSION_TIME_START env var.",
         rich_help_panel="Incremental Loading",
     ),
-    submission_time_end: datetime | None = typer.Option(
-        datetime_from_env("KLT_SUBMISSION_TIME_END"),
-        "--submission-time-end",
-        help="Optional end date for incremental loading of submission data. "
-        "Only submissions with _submission_time < this value will be fetched. "
-        "Can be set via KLT_SUBMISSION_TIME_END env var.",
-        rich_help_panel="Incremental Loading",
-    ),
     asset_last_submission_start: datetime = typer.Option(
-        datetime_from_env("KLT_ASSET_LAST_SUBMISSION_START")
+        incremental_settings.asset_last_submission_start
         or pendulum.now().start_of("day"),
         "--asset-last-submission-start",
         help="Initial date for filtering assets by deployment__last_submission_time. "
@@ -179,56 +174,40 @@ def incremental(
         "Defaults to today at 00:00:00. Can be set via KLT_ASSET_LAST_SUBMISSION_START env var.",
         rich_help_panel="Incremental Loading",
     ),
-    asset_last_submission_end: datetime | None = typer.Option(
-        datetime_from_env("KLT_ASSET_LAST_SUBMISSION_END"),
-        "--asset-last-submission-end",
-        help="Optional end date for filtering assets by deployment__last_submission_time. "
-        "Only assets with a last submission < this value will be processed. "
-        "Can be set via KLT_ASSET_LAST_SUBMISSION_END env var.",
-        rich_help_panel="Incremental Loading",
-    ),
     asset_modified_start: datetime = typer.Option(
-        datetime_from_env("KLT_ASSET_MODIFIED_START") or pendulum.now().start_of("day"),
+        incremental_settings.asset_modified_start or pendulum.now().start_of("day"),
         "--asset-modified-start",
         help="Initial date for filtering assets by date_modified field. "
         "Only assets modified >= this value will be processed on first run. "
         "Defaults to today at 00:00:00. Can be set via KLT_ASSET_MODIFIED_START env var.",
         rich_help_panel="Incremental Loading",
     ),
-    asset_modified_end: datetime | None = typer.Option(
-        datetime_from_env("KLT_ASSET_MODIFIED_END"),
-        "--asset-modified-end",
-        help="Optional end date for filtering assets by date_modified field. "
-        "Only assets modified < this value will be processed. "
-        "Can be set via KLT_ASSET_MODIFIED_END env var.",
-        rich_help_panel="Incremental Loading",
-    ),
     pipeline_name: str = typer.Option(
-        os.getenv("KLT_PIPELINE_NAME", "klt"),
+        pipeline_settings.pipeline_name,
         "--pipeline-name",
         help="Name of the dlt pipeline instance used to store state and logs.",
         rich_help_panel="Pipeline Configuration",
     ),
     destination: str = typer.Option(
-        os.getenv("KLT_DESTINATION", "duckdb"),
+        pipeline_settings.destination,
         "--destination",
-        help="Target destination for loaded data (postgres, duckdb, bigquery, etc.).",
+        help="Target destination for loaded data (postgres, duckdb, etc.).",
         rich_help_panel="Pipeline Configuration",
     ),
     dataset_name: str = typer.Option(
-        os.getenv("KLT_DATASET_NAME", "klt_dataset"),
+        pipeline_settings.dataset_name,
         "--dataset-name",
         help="Name of the dataset/schema that will receive the loaded tables.",
         rich_help_panel="Pipeline Configuration",
     ),
     write_disposition: str = typer.Option(
-        os.getenv("KLT_WRITE_DISPOSITION", "merge"),
+        pipeline_settings.write_disposition,
         "--write-disposition",
         help="Write disposition: 'merge', 'replace', or 'append'.",
         rich_help_panel="Pipeline Configuration",
     ),
     progress: str = typer.Option(
-        os.getenv("KLT_PROGRESS", "log"),
+        pipeline_settings.progress,
         "--progress",
         help="Progress reporting mode: 'log', 'enlighten', or 'alive'.",
         rich_help_panel="Pipeline Configuration",
@@ -242,11 +221,11 @@ def incremental(
     """
     load_kobo(
         submission_time_start=submission_time_start,
-        submission_time_end=submission_time_end,
+        submission_time_end=None,
         asset_last_submission_start=asset_last_submission_start,
-        asset_last_submission_end=asset_last_submission_end,
+        asset_last_submission_end=None,
         asset_modified_start=asset_modified_start,
-        asset_modified_end=asset_modified_end,
+        asset_modified_end=None,
         pipeline_name=pipeline_name,
         destination=destination,
         dataset_name=dataset_name,
@@ -258,7 +237,7 @@ def incremental(
 @app.command()
 def drop(
     pipeline_name: str = typer.Option(
-        os.getenv("KLT_PIPELINE_NAME", "klt"),
+        pipeline_settings.pipeline_name,
         "--pipeline-name",
         help="Name of the dlt pipeline instance to drop.",
     ),
