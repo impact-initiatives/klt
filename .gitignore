@@ -40,6 +40,7 @@ data/*
 
 # Env
 .env*
+!.env.template
 
 # MacOS files
 .DS_Store
