@@ -9,7 +9,7 @@ Configuration domains:
 - PostgresCredentials: PostgreSQL destination credentials (DESTINATION__POSTGRES__CREDENTIALS__*)
 - PipelineSettings: DLT pipeline settings (KLT_*)
 - IncrementalSettings: Incremental loading datetime filters (KLT_*)
-- LoggingSettings: Application logging configuration (LOG_DIR)
+- LoggingSettings: Application logging configuration (KLT_LOG_DIR)
 """
 
 import pathlib
