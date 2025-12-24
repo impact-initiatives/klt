@@ -208,3 +208,66 @@ def make_asset_submissions_url(
         Full API URL string
     """
     return f"{host}/api/v2/assets/{asset_uid}/data/"
+
+
+def make_asset_content_data(
+    survey_items: list[dict] | None = None,
+    schema: str = "http://xlsform.org/xform/1.0",
+    form_title: str = "Test Form",
+    default_language: str = "English",
+) -> dict:
+    """Create asset content data matching KoboToolbox API /content/ response.
+
+    Args:
+        survey_items: List of survey item dicts with fields like:
+            {
+                "type": "text",
+                "name": "question_1",
+                "$kuid": "abc123",
+                "$xpath": "question_1",
+                "$autoname": "question_1"
+            }
+        schema: XLSForm schema version
+        form_title: Title of the form
+        default_language: Default form language
+
+    Returns:
+        Dict matching KoboToolbox content API response structure
+    """
+    if survey_items is None:
+        survey_items = [
+            {
+                "type": "text",
+                "name": "default_question",
+                "$kuid": "default_kuid_1",
+                "$xpath": "default_question",
+                "$autoname": "default_question",
+            }
+        ]
+
+    return {
+        "schema": schema,
+        "survey": survey_items,
+        "settings": {
+            "form_title": form_title,
+            "default_language": default_language,
+        },
+        "translated": ["label"],
+        "translations": [default_language],
+    }
+
+
+def make_asset_content_url(
+    asset_uid: str,
+    host: str = "https://kf.kobotoolbox.org",
+) -> str:
+    """Generate API URL for asset content endpoint.
+
+    Args:
+        asset_uid: UID of the asset
+        host: API server host
+
+    Returns:
+        Full API URL string
+    """
+    return f"{host}/api/v2/assets/{asset_uid}/content/"

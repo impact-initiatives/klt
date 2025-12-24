@@ -5,7 +5,6 @@ KoboToolbox API data.
 """
 
 import functools
-import os
 from datetime import datetime
 from itertools import pairwise
 from typing import Any, Callable, Iterable, Literal
@@ -95,38 +94,6 @@ def ensure_timezone_aware(
         return wrapper
 
     return decorator
-
-
-def datetime_from_env(env_var: str) -> DateTime | None:
-    """Parse datetime from environment variable or return None if not set.
-
-    Parameters
-    ----------
-    env_var : str
-        Environment variable name to read.
-
-    Returns
-    -------
-    DateTime | None
-        Parsed datetime from environment variable, or None if variable is not set,
-        empty, or contains invalid datetime format.
-
-    Notes
-    -----
-    Invalid datetime formats are logged as warnings and treated as missing values.
-    Empty strings and whitespace-only values are treated as missing.
-    """
-    value = os.getenv(env_var)
-    if not value or not value.strip():
-        return None
-    try:
-        # pendulum.parse returns DateTime for ISO 8601 strings
-        return pendulum.parse(value)  # type: ignore
-    except Exception:
-        logger.warning(
-            f"Invalid datetime format in {env_var}={value!r}, using default value"
-        )
-        return None
 
 
 def make_kobo_pipeline_hooks(

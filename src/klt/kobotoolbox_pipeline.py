@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import dlt
+from dlt.destinations import postgres as postgres_destination
 from dlt.extract.source import DltSource
 from dlt.sources.helpers.rest_client.client import RESTClient
 
@@ -15,6 +16,10 @@ from klt.resources.kobo_asset import (
 )
 from klt.rest_client import make_rest_client
 
+from .settings import KoboAuthSettings, PostgresCredentials
+
+kobo_auth = KoboAuthSettings()
+
 
 @dlt.source()
 def kobo_source(
@@ -24,9 +29,9 @@ def kobo_source(
     asset_last_submission_end: datetime | None,
     asset_modified_start: datetime,
     asset_modified_end: datetime | None,
-    kobo_token: str = dlt.secrets.value,
-    kobo_server: str = dlt.secrets.value,
-    kobo_project_view: str = dlt.secrets.value,
+    kobo_token: str = kobo_auth.kobo_token,
+    kobo_server: str = kobo_auth.kobo_server,
+    kobo_project_view: str = kobo_auth.kobo_project_view,
 ) -> DltSource:
     """Create a DLT source for KoboToolbox data extraction.
 
@@ -111,9 +116,16 @@ def load_kobo(
     write_disposition: str = "merge",
     progress: str = "log",
 ):
+    if destination == "postgres":
+        pg_creds = PostgresCredentials()
+
+        destination_config = postgres_destination(credentials=pg_creds.model_dump())
+    else:
+        destination_config = destination
+
     pipeline = dlt.pipeline(
         pipeline_name=pipeline_name,
-        destination=destination,
+        destination=destination_config,
         dataset_name=dataset_name,
         progress=progress,
     )

@@ -8,14 +8,18 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "azure-identity>=1.25.1",
+    "azure-keyvault-secrets>=4.9.0",
     "dlt[duckdb,postgres,workspace]>=1.17.1",
     "loguru>=0.7.3",
     "orjson>=3.11.4",
     "pandas>=2.3.3",
     "pendulum>=3.1.0",
+    "pydantic-settings>=2.12.0",
     "pydantic[email]>=2.12.4",
     "requests-cache>=1.2.1",
     "rich>=14.2.0",
+    "sentry-sdk>=2.47.0",
     "typer>=0.19.2",
 ]
 

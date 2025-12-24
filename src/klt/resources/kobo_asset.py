@@ -143,6 +143,7 @@ def make_resource_kobo_asset_content(
     @dlt.transformer(
         data_from=kobo_asset,
         name="kobo_asset_content",
+        primary_key=["asset_uid"],
         parallelized=parallelized,
         selected=selected,
     )

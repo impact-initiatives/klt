@@ -112,7 +112,7 @@ jobs:
               KLT_ASSET_MODIFIED_START="${{ env.KLT_ASSET_MODIFIED_START }}" \
               KLT_ASSET_MODIFIED_END="${{ env.KLT_ASSET_MODIFIED_END }}" \
               DLT_DATA_DIR="/app/klt_pipelines" \
-              LOG_DIR="/app/klt_pipelines/logs/${{ env.PIPELINE_NAME }}/${{ github.run_id }}" \
+              KLT_LOG_DIR="/app/klt_pipelines/logs/${{ env.PIPELINE_NAME }}/${{ github.run_id }}" \
               DESTINATION__POSTGRES__CREDENTIALS__PORT="${{ secrets.POSTGRES_PORT || '5432' }}" \
               DESTINATION__POSTGRES__CREDENTIALS__CONNECT_TIMEOUT="${{ vars.POSTGRES_CONNECT_TIMEOUT || '15' }}" \
             --secure-environment-variables \

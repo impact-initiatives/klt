@@ -1,10 +1,11 @@
 import logging
-import os
 import sys
 from pathlib import Path
 
 import requests
 from loguru import logger
+
+from .settings import LoggingSettings
 
 logger.remove()
 
@@ -41,8 +42,9 @@ def http_log(response: requests.Response, *args, **kwargs):
     return response
 
 
-# Get log directory from environment or use current directory
-log_dir = Path(os.getenv("LOG_DIR", "."))
+logging_settings = LoggingSettings()
+log_dir = Path(logging_settings.log_dir)
+# TODO: Discuss the automated creation of the directory silently
 log_dir.mkdir(parents=True, exist_ok=True)
 
 logger.add(
