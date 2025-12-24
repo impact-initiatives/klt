@@ -35,14 +35,15 @@ class KoboAuthSettings(BaseSettings):
 class PostgresCredentials(BaseSettings):
     """PostgreSQL destination credentials.
 
-    All fields are optional since Postgres is only needed when destination="postgres".
+    All fields are required when using postgres as destination.
+    Only instantiate this model when destination="postgres".
     """
 
-    host: str | None = None
+    host: str
     port: int = 5432
-    database: str | None = None
-    username: str | None = None
-    password: str | None = None
+    database: str
+    username: str
+    password: str
     connect_timeout: int = 15
 
     model_config = SettingsConfigDict(
