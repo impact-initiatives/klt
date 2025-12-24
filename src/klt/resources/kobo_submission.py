@@ -2,18 +2,20 @@ from datetime import datetime
 
 import dlt
 import orjson
+from dlt.extract.incremental import Incremental
 from dlt.sources.helpers.rest_client.client import RESTClient
 
-from klt.utils import make_kobo_pipeline_hooks, parse_timestamps
+from klt.utils import ensure_timezone_aware, make_kobo_pipeline_hooks, parse_timestamps
 
 submission_hooks = make_kobo_pipeline_hooks(
     ignored_http_status_codes=[404], enable_http_logging=True
 )
 
 
+@ensure_timezone_aware()
 def make_submission_time_hint(
     initial_value: datetime, end_value: datetime | None = None
-):
+) -> Incremental:
     """Create incremental hint for _submission_time cursor.
 
     Enables incremental loading based on submission timestamp.
@@ -22,11 +24,12 @@ def make_submission_time_hint(
     ----------
     initial_value : datetime
         Starting cursor value for the first incremental load. Submissions with
-        _submission_time >= this value will be included.
+        _submission_time >= this value will be included. If timezone-naive,
+        will be converted to local timezone with a warning.
     end_value : datetime | None, optional
         Optional ending cursor value for the incremental load. Submissions with
-        _submission_time < this value will be included.
-        If None, no upper bound is applied.
+        _submission_time < this value will be included. If None, no upper bound
+        is applied. If timezone-naive, will be converted to local timezone with a warning.
 
     Returns
     -------
