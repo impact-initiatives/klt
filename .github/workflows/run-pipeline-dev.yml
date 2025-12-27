@@ -76,47 +76,16 @@ jobs:
           echo "KLT_DATASET_NAME=${{ inputs.dataset_name || 'kobo_dev' }}" >> $GITHUB_ENV
           echo "KLT_WRITE_DISPOSITION=${{ inputs.write_disposition || 'merge' }}" >> $GITHUB_ENV
 
-          # Set date parameters (only if provided)
-          if [ -n "${{ inputs.submission_time_start }}" ]; then
-            echo "KLT_SUBMISSION_TIME_START=${{ inputs.submission_time_start }}" >> $GITHUB_ENV
-          fi
-          if [ -n "${{ inputs.submission_time_end }}" ]; then
-            echo "KLT_SUBMISSION_TIME_END=${{ inputs.submission_time_end }}" >> $GITHUB_ENV
-          fi
-          if [ -n "${{ inputs.asset_last_submission_start }}" ]; then
-            echo "KLT_ASSET_LAST_SUBMISSION_START=${{ inputs.asset_last_submission_start }}" >> $GITHUB_ENV
-          fi
-          if [ -n "${{ inputs.asset_last_submission_end }}" ]; then
-            echo "KLT_ASSET_LAST_SUBMISSION_END=${{ inputs.asset_last_submission_end }}" >> $GITHUB_ENV
-          fi
-          if [ -n "${{ inputs.asset_modified_start }}" ]; then
-            echo "KLT_ASSET_MODIFIED_START=${{ inputs.asset_modified_start }}" >> $GITHUB_ENV
-          fi
-          if [ -n "${{ inputs.asset_modified_end }}" ]; then
-            echo "KLT_ASSET_MODIFIED_END=${{ inputs.asset_modified_end }}" >> $GITHUB_ENV
-          fi
+          # Set date parameters
+          echo "KLT_SUBMISSION_TIME_START=${{ inputs.submission_time_start }}" >> $GITHUB_ENV
+          echo "KLT_SUBMISSION_TIME_END=${{ inputs.submission_time_end }}" >> $GITHUB_ENV
+          echo "KLT_ASSET_LAST_SUBMISSION_START=${{ inputs.asset_last_submission_start }}" >> $GITHUB_ENV
+          echo "KLT_ASSET_LAST_SUBMISSION_END=${{ inputs.asset_last_submission_end }}" >> $GITHUB_ENV
+          echo "KLT_ASSET_MODIFIED_START=${{ inputs.asset_modified_start }}" >> $GITHUB_ENV
+          echo "KLT_ASSET_MODIFIED_END=${{ inputs.asset_modified_end }}" >> $GITHUB_ENV
 
       - name: Create Azure Container Instance
         run: |
-          # Build environment variables string, only including datetime vars if they're set
-          ENV_VARS="KLT_PIPELINE_NAME=\"${{ env.KLT_PIPELINE_NAME }}\" \
-            KLT_DESTINATION=\"${{ vars.KLT_DESTINATION || 'postgres' }}\" \
-            KLT_DATASET_NAME=\"${{ env.KLT_DATASET_NAME }}\" \
-            KLT_WRITE_DISPOSITION=\"${{ env.KLT_WRITE_DISPOSITION }}\" \
-            KLT_PROGRESS=\"${{ vars.KLT_PROGRESS || 'log' }}\" \
-            DLT_DATA_DIR=\"/app/klt_pipelines\" \
-            KLT_LOG_DIR=\"/app/klt_pipelines/logs/${{ env.PIPELINE_NAME }}/${{ github.run_id }}\" \
-            DESTINATION__POSTGRES__CREDENTIALS__PORT=\"${{ secrets.POSTGRES_PORT || '5432' }}\" \
-            DESTINATION__POSTGRES__CREDENTIALS__CONNECT_TIMEOUT=\"${{ vars.POSTGRES_CONNECT_TIMEOUT || '15' }}\""
-
-          # Add optional datetime parameters only if they exist
-          [ -n "${{ env.KLT_SUBMISSION_TIME_START }}" ] && ENV_VARS="$ENV_VARS KLT_SUBMISSION_TIME_START=\"${{ env.KLT_SUBMISSION_TIME_START }}\""
-          [ -n "${{ env.KLT_SUBMISSION_TIME_END }}" ] && ENV_VARS="$ENV_VARS KLT_SUBMISSION_TIME_END=\"${{ env.KLT_SUBMISSION_TIME_END }}\""
-          [ -n "${{ env.KLT_ASSET_LAST_SUBMISSION_START }}" ] && ENV_VARS="$ENV_VARS KLT_ASSET_LAST_SUBMISSION_START=\"${{ env.KLT_ASSET_LAST_SUBMISSION_START }}\""
-          [ -n "${{ env.KLT_ASSET_LAST_SUBMISSION_END }}" ] && ENV_VARS="$ENV_VARS KLT_ASSET_LAST_SUBMISSION_END=\"${{ env.KLT_ASSET_LAST_SUBMISSION_END }}\""
-          [ -n "${{ env.KLT_ASSET_MODIFIED_START }}" ] && ENV_VARS="$ENV_VARS KLT_ASSET_MODIFIED_START=\"${{ env.KLT_ASSET_MODIFIED_START }}\""
-          [ -n "${{ env.KLT_ASSET_MODIFIED_END }}" ] && ENV_VARS="$ENV_VARS KLT_ASSET_MODIFIED_END=\"${{ env.KLT_ASSET_MODIFIED_END }}\""
-
           az container create \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.CONTAINER_NAME }} \
@@ -130,7 +99,22 @@ jobs:
             --azure-file-volume-account-key ${{ secrets.AZURE_STORAGE_KEY }} \
             --azure-file-volume-share-name ${{ secrets.AZURE_FILE_SHARE }} \
             --azure-file-volume-mount-path /app/klt_pipelines \
-            --environment-variables $ENV_VARS \
+            --environment-variables \
+              KLT_PIPELINE_NAME="${{ env.KLT_PIPELINE_NAME }}" \
+              KLT_DESTINATION="${{ vars.KLT_DESTINATION || 'postgres' }}" \
+              KLT_DATASET_NAME="${{ env.KLT_DATASET_NAME }}" \
+              KLT_WRITE_DISPOSITION="${{ env.KLT_WRITE_DISPOSITION }}" \
+              KLT_PROGRESS="${{ vars.KLT_PROGRESS || 'log' }}" \
+              KLT_SUBMISSION_TIME_START="${{ env.KLT_SUBMISSION_TIME_START }}" \
+              KLT_SUBMISSION_TIME_END="${{ env.KLT_SUBMISSION_TIME_END }}" \
+              KLT_ASSET_LAST_SUBMISSION_START="${{ env.KLT_ASSET_LAST_SUBMISSION_START }}" \
+              KLT_ASSET_LAST_SUBMISSION_END="${{ env.KLT_ASSET_LAST_SUBMISSION_END }}" \
+              KLT_ASSET_MODIFIED_START="${{ env.KLT_ASSET_MODIFIED_START }}" \
+              KLT_ASSET_MODIFIED_END="${{ env.KLT_ASSET_MODIFIED_END }}" \
+              DLT_DATA_DIR="/app/klt_pipelines" \
+              KLT_LOG_DIR="/app/klt_pipelines/logs/${{ env.PIPELINE_NAME }}/${{ github.run_id }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__PORT="${{ secrets.POSTGRES_PORT || '5432' }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__CONNECT_TIMEOUT="${{ vars.POSTGRES_CONNECT_TIMEOUT || '15' }}" \
             --secure-environment-variables \
               SOURCES__KOBO_SERVER="${{ secrets.KOBO_SERVER }}" \
               SOURCES__KOBO_TOKEN="${{ secrets.KOBO_TOKEN }}" \
