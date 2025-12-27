@@ -73,8 +73,8 @@ jobs:
         run: |
           # Set pipeline config parameters
           echo "KLT_PIPELINE_NAME=${{ env.PIPELINE_NAME }}" >> $GITHUB_ENV
-          echo "KLT_DATASET_NAME=${{ inputs.dataset_name }}" >> $GITHUB_ENV
-          echo "KLT_WRITE_DISPOSITION=${{ inputs.write_disposition }}" >> $GITHUB_ENV
+          echo "KLT_DATASET_NAME=${{ inputs.dataset_name || 'kobo_dev' }}" >> $GITHUB_ENV
+          echo "KLT_WRITE_DISPOSITION=${{ inputs.write_disposition || 'merge' }}" >> $GITHUB_ENV
 
           # Set date parameters
           echo "KLT_SUBMISSION_TIME_START=${{ inputs.submission_time_start }}" >> $GITHUB_ENV
