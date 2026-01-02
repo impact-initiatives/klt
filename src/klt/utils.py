@@ -9,8 +9,11 @@ from datetime import datetime
 from itertools import pairwise
 from typing import Any, Callable, Iterable, Literal
 
+import dlt
 import pendulum
+from dlt.extract.exceptions import CurrentSourceNotAvailable
 from dlt.extract.incremental import Incremental
+from dlt.sources import DltResource
 from dlt.sources.rest_api.config_setup import create_response_hooks
 from dlt.sources.rest_api.typing import ResponseAction
 from pendulum import DateTime, Interval
@@ -270,3 +273,134 @@ def make_time_batches(
     if max(batching_ranges) < end_:
         batching_ranges.append(end_)
     return pairwise(batching_ranges)
+
+
+def get_current_hint() -> Incremental | None:
+    """Get the current incremental hint from the DLT resource context.
+
+    This function must be called from within a DLT resource or transformer function
+    during pipeline execution. It accesses the DLT execution context to retrieve
+    the incremental configuration that was applied to the resource.
+
+    The resource's incremental property returns Optional[IncrementalResourceWrapper],
+    which can be either an IncrementalResourceWrapper or an Incremental object directly,
+    depending on how the incremental hint was configured.
+
+    Returns
+    -------
+    Incremental | None
+        The incremental configuration if available, None if no incremental hint
+        was applied to the current resource.
+
+    Raises
+    ------
+    CurrentSourceNotAvailable
+        If called outside of a DLT resource execution context (e.g., called at
+        module import time, in a regular function, or before pipeline execution).
+        This indicates the function is being used incorrectly.
+
+    Examples
+    --------
+    Correct usage within a DLT resource:
+
+    >>> @dlt.resource(name="my_resource")
+    ... def my_resource():
+    ...     hint = get_current_hint()
+    ...     if hint is not None:
+    ...         cursor_name = hint.get_cursor_column_name()
+    ...         start_value = hint.last_value or hint.initial_value
+    ...         # Use hint to build query parameters
+    ...     yield data
+
+    Incorrect usage (will raise CurrentSourceNotAvailable):
+
+    >>> # At module level (wrong!)
+    >>> hint = get_current_hint()  # Raises CurrentSourceNotAvailable
+
+    >>> # In a regular function (wrong!)
+    >>> def some_function():
+    ...     hint = get_current_hint()  # Raises CurrentSourceNotAvailable
+
+    Notes
+    -----
+    - This function relies on DLT's execution context (dlt.current.resource())
+    - It will only work when called during the execution of a @dlt.resource
+      or @dlt.transformer decorated function
+    - The function handles both IncrementalResourceWrapper and Incremental
+      object types that can be returned by the resource's incremental property
+    - Returns None if the resource has no incremental hint applied, which is
+      a valid state for full-load operations
+    """
+    try:
+        current_resource: DltResource = dlt.current.resource()
+        hint = current_resource.incremental
+
+        if hint is None:
+            return None
+
+        if isinstance(hint, Incremental):
+            return hint
+
+        return hint.incremental
+    except CurrentSourceNotAvailable:
+        raise
+    except AttributeError:
+        return None
+
+
+def build_filter_from_hint(
+    hint: Incremental,
+    cursor_field: str = "date_modified",
+) -> dict[str, str] | None:
+    """Build API query filter from DLT incremental hint.
+
+    Constructs server-side filters for KoboToolbox API based on incremental
+    configuration. Only certain cursor fields support server-side filtering.
+
+    Args:
+        hint: DLT incremental hint with cursor configuration
+        cursor_field: Name of the cursor field to filter on (default: "date_modified")
+
+    Returns:
+        Dictionary with query parameters for API request, or None if the cursor
+        field doesn't support server-side filtering.
+
+        Example return value:
+        {
+            "q": "date_modified__gte:2026-01-02"
+        }
+
+        Or with end_value:
+        {
+            "q": "date_modified__gte:2026-01-02 AND date_modified__lte:2026-01-31"
+        }
+
+    Note:
+        - Only "date_modified" cursor supports server-side filtering
+        - Other cursors (e.g., "deployment__last_submission_time") must use
+          client-side filtering handled by DLT
+
+    Example:
+        >>> @dlt.resource
+        >>> def my_resource():
+        >>>     hint = get_current_hint()
+        >>>     if hint is not None:
+        >>>         params = build_filter_from_hint(hint)
+        >>>         # Returns: {"q": "date_modified__gte:2026-01-01"}
+    """
+    cursor_name = hint.get_cursor_column_name()
+
+    # Only date_modified supports server-side filtering
+    if cursor_name != cursor_field:
+        return None
+
+    start_value = hint.start_value
+    if start_value is None:
+        return None
+
+    date_filter = f"{cursor_field}__gte:{start_value.date()}"
+
+    if hint.end_value is not None:
+        date_filter += f" AND {cursor_field}__lte:{hint.end_value.date()}"
+
+    return {"q": date_filter}
