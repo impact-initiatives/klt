@@ -5,6 +5,7 @@ KoboToolbox API data.
 """
 
 import functools
+import json
 from datetime import datetime
 from itertools import pairwise
 from typing import Any, Callable, Iterable, Literal
@@ -404,3 +405,67 @@ def build_filter_from_hint(
         date_filter += f" AND {cursor_field}__lte:{hint.end_value.date()}"
 
     return {"q": date_filter}
+
+
+def build_submission_filter_from_hint(
+    hint: Incremental,
+    cursor_field: str = "_submission_time",
+) -> dict[str, str] | None:
+    """Build MongoDB-style query filter for submission data from DLT incremental hint.
+
+    Constructs server-side filters for KoboToolbox submission API using MongoDB
+    query syntax. The filter is passed as a JSON string in the 'query' parameter.
+
+    Args:
+        hint: DLT incremental hint with cursor configuration
+        cursor_field: Name of the cursor field to filter on (default: "_submission_time")
+
+    Returns:
+        Dictionary with query parameters for API request, or None if the cursor
+        field doesn't support server-side filtering.
+
+        Example return value:
+        {
+            "query": '{"_submission_time": {"$gte": "2026-01-02T00:00:00+00:00"}}'
+        }
+
+        Or with end_value:
+        {
+            "query": '{"_submission_time": {"$gte": "2026-01-02T00:00:00+00:00", "$lt": "2026-01-31T23:59:59+00:00"}}'
+        }
+
+    Note:
+        - Only "_submission_time" cursor supports server-side filtering
+        - Uses MongoDB query operators: $gte (greater than or equal), $lt (less than)
+        - Timestamps are formatted as ISO 8601 strings with timezone
+
+    Example:
+        >>> @dlt.transformer
+        >>> def kobo_submission(asset):
+        >>>     hint = get_current_hint()
+        >>>     if hint is not None:
+        >>>         params = build_submission_filter_from_hint(hint)
+        >>>         # Returns: {"query": '{"_submission_time": {"$gte": "2026-01-01T00:00:00+00:00"}}'}
+    """
+
+    cursor_name = hint.get_cursor_column_name()
+
+    # Only _submission_time supports server-side filtering
+    if cursor_name != cursor_field:
+        return None
+
+    start_value = hint.start_value
+    if start_value is None:
+        return None
+
+    # Build MongoDB query filter
+    mongo_filter = {cursor_field: {}}
+
+    # Add $gte (greater than or equal) condition
+    mongo_filter[cursor_field]["$gte"] = start_value.isoformat()
+
+    # Add $lt (less than) condition if end_value exists
+    if hint.end_value is not None:
+        mongo_filter[cursor_field]["$lt"] = hint.end_value.isoformat()
+
+    return {"query": json.dumps(mongo_filter)}
