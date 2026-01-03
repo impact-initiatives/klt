@@ -84,9 +84,7 @@ def make_resource_kobo_submission(
 
         hint = get_current_hint()
         if hint is not None:
-            filter_param = build_submission_filter_from_hint(
-                hint, cursor_field="_submission_time"
-            )
+            filter_param = build_submission_filter_from_hint(hint)
             if filter_param is not None:
                 params.update(filter_param)
 

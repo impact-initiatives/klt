@@ -88,21 +88,6 @@ def test_no_start_value_returns_none():
     assert result is None
 
 
-def test_custom_cursor_field_parameter():
-    """Should support custom cursor field parameter."""
-    hint = Incremental(
-        cursor_path="custom_time_field",
-        initial_value=pendulum.parse("2026-01-01T00:00:00+00:00"),
-    )
-
-    result = build_submission_filter_from_hint(hint, cursor_field="custom_time_field")
-
-    assert result is not None
-    query = json.loads(result["query"])
-    assert "custom_time_field" in query
-    assert query["custom_time_field"]["$gte"] == "2026-01-01T00:00:00+00:00"
-
-
 def test_datetime_preserves_full_timestamp():
     """Should preserve full timestamp with time components and timezone."""
     hint = Incremental(
