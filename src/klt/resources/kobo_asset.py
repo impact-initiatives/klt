@@ -12,7 +12,9 @@ from dlt.sources import DltResource
 from dlt.sources.helpers.rest_client.client import RESTClient
 
 from klt.utils import (
+    build_asset_filter_from_hint,
     ensure_timezone_aware,
+    get_current_hint,
     make_kobo_pipeline_hooks,
     parse_timestamps,
 )
@@ -77,7 +79,17 @@ def make_resource_kobo_asset(
         params = {
             "format": "json",
             "limit": page_size,
+            "ordering": "-date_modified",  # Descending order
         }
+
+        hint = get_current_hint()
+
+        if hint is not None:
+            filter_params = build_asset_filter_from_hint(hint)
+
+            if filter_params is not None:
+                params.update(filter_params)
+
         for page in kobo_client.paginate(
             path=path,
             params=params,

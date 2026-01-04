@@ -5,7 +5,13 @@ import orjson
 from dlt.extract.incremental import Incremental
 from dlt.sources.helpers.rest_client.client import RESTClient
 
-from klt.utils import ensure_timezone_aware, make_kobo_pipeline_hooks, parse_timestamps
+from klt.utils import (
+    build_submission_filter_from_hint,
+    ensure_timezone_aware,
+    get_current_hint,
+    make_kobo_pipeline_hooks,
+    parse_timestamps,
+)
 
 submission_hooks = make_kobo_pipeline_hooks(
     ignored_http_status_codes=[404], enable_http_logging=True
@@ -75,6 +81,13 @@ def make_resource_kobo_submission(
 
         path = f"/api/v2/assets/{asset_uid}/data/"
         params = {"format": "json", "limit": page_size}
+
+        hint = get_current_hint()
+        if hint is not None:
+            filter_param = build_submission_filter_from_hint(hint)
+            if filter_param is not None:
+                params.update(filter_param)
+
         for page in kobo_client.paginate(
             path=path, params=params, data_selector="results", hooks=submission_hooks
         ):

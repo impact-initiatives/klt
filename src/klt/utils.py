@@ -5,12 +5,16 @@ KoboToolbox API data.
 """
 
 import functools
+import json
 from datetime import datetime
 from itertools import pairwise
 from typing import Any, Callable, Iterable, Literal
 
+import dlt
 import pendulum
+from dlt.extract.exceptions import CurrentSourceNotAvailable
 from dlt.extract.incremental import Incremental
+from dlt.sources import DltResource
 from dlt.sources.rest_api.config_setup import create_response_hooks
 from dlt.sources.rest_api.typing import ResponseAction
 from pendulum import DateTime, Interval
@@ -104,7 +108,7 @@ def make_kobo_pipeline_hooks(
     """Create HTTP response hooks for KoboToolbox API requests.
 
     Configures response handling behavior including logging and status code
-    filtering for DLT REST API client requests.
+    filtering for dlt REST API client requests.
 
     Parameters
     ----------
@@ -120,7 +124,7 @@ def make_kobo_pipeline_hooks(
     Returns
     -------
     dict
-        Response hooks configuration dict compatible with DLT REST client,
+        Response hooks configuration dict compatible with dlt REST client,
         containing combined actions for logging, status code filtering,
         and any custom response actions.
 
@@ -270,3 +274,194 @@ def make_time_batches(
     if max(batching_ranges) < end_:
         batching_ranges.append(end_)
     return pairwise(batching_ranges)
+
+
+def get_current_hint() -> Incremental | None:
+    """Get the current incremental hint from the dlt resource context.
+
+    This function must be called from within a dlt resource or transformer function
+    during pipeline execution. It accesses the dlt execution context to retrieve
+    the incremental configuration that was applied to the resource.
+
+    The resource's incremental property returns Optional[IncrementalResourceWrapper],
+    which can be either an IncrementalResourceWrapper or an Incremental object directly,
+    depending on how the incremental hint was configured.
+
+    Returns
+    -------
+    Incremental | None
+        The incremental configuration if available, None if no incremental hint
+        was applied to the current resource.
+
+    Raises
+    ------
+    CurrentSourceNotAvailable
+        If called outside of a dlt resource execution context (e.g., called at
+        module import time, in a regular function, or before pipeline execution).
+        This indicates the function is being used incorrectly.
+
+    Examples
+    --------
+    Correct usage within a dlt resource:
+
+    >>> @dlt.resource(name="my_resource")
+    ... def my_resource():
+    ...     hint = get_current_hint()
+    ...     if hint is not None:
+    ...         cursor_name = hint.get_cursor_column_name()
+    ...         start_value = hint.last_value or hint.initial_value
+    ...         # Use hint to build query parameters
+    ...     yield data
+
+    Incorrect usage (will raise CurrentSourceNotAvailable):
+
+    >>> # At module level (wrong!)
+    >>> hint = get_current_hint()  # Raises CurrentSourceNotAvailable
+
+    >>> # In a regular function (wrong!)
+    >>> def some_function():
+    ...     hint = get_current_hint()  # Raises CurrentSourceNotAvailable
+
+    Notes
+    -----
+    - This function relies on dlt's execution context (dlt.current.resource())
+    - It will only work when called during the execution of a @dlt.resource
+      or @dlt.transformer decorated function
+    - The function handles both IncrementalResourceWrapper and Incremental
+      object types that can be returned by the resource's incremental property
+    - Returns None if the resource has no incremental hint applied, which is
+      a valid state for full-load operations
+    """
+    try:
+        current_resource: DltResource = dlt.current.resource()
+        hint = current_resource.incremental
+
+        if hint is None:
+            return None
+
+        if isinstance(hint, Incremental):
+            return hint
+
+        return hint.incremental
+    except CurrentSourceNotAvailable:
+        raise
+    except AttributeError:
+        return None
+
+
+def build_asset_filter_from_hint(
+    hint: Incremental,
+) -> dict[str, str] | None:
+    """Build API query filter for kobo_asset resource from dlt incremental hint.
+
+    Constructs server-side filters for KoboToolbox asset API based on incremental
+    configuration using query string syntax.
+
+    Args:
+        hint: dlt incremental hint with cursor configuration
+
+    Returns:
+        Dictionary with query parameters for API request, or None if the cursor
+        field doesn't support server-side filtering.
+
+        Example return value:
+        {
+            "q": "date_modified__gte:2026-01-02"
+        }
+
+        Or with end_value:
+        {
+            "q": "date_modified__gte:2026-01-02 AND date_modified__lte:2026-01-31"
+        }
+
+    Note:
+        - Only "date_modified" cursor supports server-side filtering
+        - Other cursors (e.g., "deployment__last_submission_time") must use
+          client-side filtering handled by dlt
+
+    Example:
+        >>> @dlt.resource
+        >>> def kobo_asset():
+        >>>     hint = get_current_hint()
+        >>>     if hint is not None:
+        >>>         params = build_asset_filter_from_hint(hint)
+        >>>         # Returns: {"q": "date_modified__gte:2026-01-01"}
+    """
+    cursor_name = hint.get_cursor_column_name()
+
+    # Only date_modified supports server-side filtering
+    if cursor_name != "date_modified":
+        return None
+
+    start_value = hint.start_value
+    if start_value is None:
+        return None
+
+    date_filter = f"date_modified__gte:{start_value.date()}"
+
+    if hint.end_value is not None:
+        date_filter += f" AND date_modified__lte:{hint.end_value.date()}"
+
+    return {"q": date_filter}
+
+
+def build_submission_filter_from_hint(
+    hint: Incremental,
+) -> dict[str, str] | None:
+    """Build MongoDB-style query filter for kobo_submission resource from dlt incremental hint.
+
+    Constructs server-side filters for KoboToolbox submission API using MongoDB
+    query syntax. The filter is passed as a JSON string in the 'query' parameter.
+
+    Args:
+        hint: dlt incremental hint with cursor configuration
+
+    Returns:
+        Dictionary with query parameters for API request, or None if the cursor
+        field doesn't support server-side filtering.
+
+        Example return value:
+        {
+            "query": '{"_submission_time": {"$gte": "2026-01-02T00:00:00+00:00"}}'
+        }
+
+        Or with end_value:
+        {
+            "query": '{"_submission_time": {"$gte": "2026-01-02T00:00:00+00:00", "$lt": "2026-01-31T23:59:59+00:00"}}'
+        }
+
+    Note:
+        - Only "_submission_time" cursor supports server-side filtering
+        - Uses MongoDB query operators: $gte (greater than or equal), $lt (less than)
+        - Timestamps are formatted as ISO 8601 strings with timezone
+
+    Example:
+        >>> @dlt.transformer
+        >>> def kobo_submission(asset):
+        >>>     hint = get_current_hint()
+        >>>     if hint is not None:
+        >>>         params = build_submission_filter_from_hint(hint)
+        >>>         # Returns: {"query": '{"_submission_time": {"$gte": "2026-01-01T00:00:00+00:00"}}'}
+    """
+
+    cursor_name = hint.get_cursor_column_name()
+
+    # Only _submission_time supports server-side filtering
+    if cursor_name != "_submission_time":
+        return None
+
+    start_value = hint.start_value
+    if start_value is None:
+        return None
+
+    # Build MongoDB query filter
+    mongo_filter = {"_submission_time": {}}
+
+    # Add $gte (greater than or equal) condition
+    mongo_filter["_submission_time"]["$gte"] = start_value.isoformat()
+
+    # Add $lt (less than) condition if end_value exists
+    if hint.end_value is not None:
+        mongo_filter["_submission_time"]["$lt"] = hint.end_value.isoformat()
+
+    return {"query": json.dumps(mongo_filter)}
