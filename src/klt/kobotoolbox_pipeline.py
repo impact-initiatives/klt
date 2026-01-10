@@ -11,6 +11,7 @@ from klt.resources import (
     make_resource_kobo_submission,
 )
 from klt.resources.kobo_asset import (
+    extract_asset_submission_metadata,
     make_date_modified_hint,
     make_resource_kobo_asset_content,
 )
@@ -70,12 +71,16 @@ def kobo_source(
         asset_modified_start, asset_modified_end
     )
 
-    kobo_asset_for_submissions = make_resource_kobo_asset(
-        kobo_client,
-        kobo_project_view_uid=kobo_project_view,
-        resource_name="kobo_asset_for_submissions",
-        selected=False,
-    ).apply_hints(incremental=last_submission_time_hint)
+    kobo_asset_for_submissions = (
+        make_resource_kobo_asset(
+            kobo_client,
+            kobo_project_view_uid=kobo_project_view,
+            resource_name="kobo_asset_for_submissions",
+            selected=True,
+        )
+        .apply_hints(incremental=last_submission_time_hint)
+        .add_map(extract_asset_submission_metadata)
+    )
 
     kobo_asset_for_content = make_resource_kobo_asset(
         kobo_client,
