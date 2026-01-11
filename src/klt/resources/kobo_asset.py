@@ -177,6 +177,52 @@ def make_resource_kobo_asset_content(
     return kobo_asset_content
 
 
+def extract_asset_submission_metadata(asset: dict) -> dict:
+    """Extract submission-related metadata fields from a KoboToolbox asset.
+
+    Creates a lightweight asset record containing only the fields necessary
+    for tracking submission activity, reducing data redundancy when separate
+    resources track asset content vs. submission metadata.
+
+    Parameters
+    ----------
+    asset : dict
+        Full asset record from KoboToolbox API containing deployment metadata.
+
+    Returns
+    -------
+    dict
+        Filtered asset record with submission-related fields:
+        - uid : str
+            Asset unique identifier for joining with full asset data
+        - deployment__submission_count : int
+            Total number of submissions received
+        - deployment__last_submission_time : datetime | None
+            Timestamp of the most recent submission
+
+    Examples
+    --------
+    >>> import pendulum
+    >>> asset = {
+    ...     "uid": "abc123",
+    ...     "name": "Survey Form",
+    ...     "deployment__submission_count": 42,
+    ...     "deployment__last_submission_time": pendulum.datetime(2025, 1, 10, 15, 30, tz="UTC"),
+    ... }
+    >>> extract_asset_submission_metadata(asset)
+    {
+        'uid': 'abc123',
+        'deployment__submission_count': 42,
+        'deployment__last_submission_time': pendulum.datetime(2025, 1, 10, 15, 30, tz="UTC")
+    }
+    """
+    return {
+        "uid": asset["uid"],
+        "deployment__submission_count": asset["deployment__submission_count"],
+        "deployment__last_submission_time": asset["deployment__last_submission_time"],
+    }
+
+
 @ensure_timezone_aware()
 def make_last_submission_time_hint(
     initial_value: datetime, end_value: datetime | None = None
