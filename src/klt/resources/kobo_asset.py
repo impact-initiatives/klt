@@ -202,17 +202,18 @@ def extract_asset_submission_metadata(asset: dict) -> dict:
 
     Examples
     --------
+    >>> import pendulum
     >>> asset = {
     ...     "uid": "abc123",
     ...     "name": "Survey Form",
     ...     "deployment__submission_count": 42,
-    ...     "deployment__last_submission_time": "2025-01-10T15:30:00Z",
+    ...     "deployment__last_submission_time": pendulum.datetime(2025, 1, 10, 15, 30, tz="UTC"),
     ... }
     >>> extract_asset_submission_metadata(asset)
     {
         'uid': 'abc123',
         'deployment__submission_count': 42,
-        'deployment__last_submission_time': '2025-01-10T15:30:00Z'
+        'deployment__last_submission_time': pendulum.datetime(2025, 1, 10, 15, 30, tz="UTC")
     }
     """
     return {
