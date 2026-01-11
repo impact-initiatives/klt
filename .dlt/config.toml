@@ -19,7 +19,7 @@ workers=20
 workers=6
 
 [load]
-workers=20
+workers=2  # Reduced from 20 to avoid Postgres connection pool exhaustion
 truncate_staging_dataset=true
 
 [data_writer]
