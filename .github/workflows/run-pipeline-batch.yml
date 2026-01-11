@@ -1,0 +1,161 @@
+name: Run KLT Pipeline (Batch)
+run-name: Run batch backfill pipeline on Azure Container Instance
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: 'Start date for asset discovery (YYYY-MM-DD or ISO 8601)'
+        required: true
+        type: string
+      end:
+        description: 'End date for asset discovery (YYYY-MM-DD or ISO 8601)'
+        required: true
+        type: string
+      chunk_size:
+        description: 'Size of each time batch'
+        required: false
+        type: choice
+        options:
+          - years
+          - months
+          - weeks
+          - days
+          - hours
+        default: 'months'
+      pipeline_name:
+        description: 'Pipeline name'
+        required: false
+        type: string
+        default: 'klt-dev'
+      dataset_name:
+        description: 'Dataset name'
+        required: false
+        type: string
+        default: 'kobo_dev'
+      write_disposition:
+        description: 'Write disposition'
+        required: false
+        type: choice
+        options:
+          - merge
+          - replace
+          - append
+        default: 'merge'
+
+env:
+  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'switzerlandnorth' }}
+  PIPELINE_NAME: ${{ inputs.pipeline_name || 'klt-dev' }}
+  CONTAINER_NAME: ${{ github.run_id }}-${{ inputs.pipeline_name || 'klt-dev' }}
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/klt:dev
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set environment variables
+        id: set-env
+        run: |
+          # Set required environment variables for dlt and secrets
+          echo "KLT_DESTINATION=${{ vars.KLT_DESTINATION || 'postgres' }}" >> $GITHUB_ENV
+          echo "KLT_PROGRESS=${{ vars.KLT_PROGRESS || 'log' }}" >> $GITHUB_ENV
+          echo "DLT_DATA_DIR=/app/klt_pipelines" >> $GITHUB_ENV
+          echo "KLT_LOG_DIR=/app/klt_pipelines/logs/${{ env.PIPELINE_NAME }}/${{ github.run_id }}" >> $GITHUB_ENV
+
+      - name: Create Azure Container Instance
+        run: |
+          # Build CLI command with explicit arguments
+          CMD="klt run batch"
+          CMD="$CMD --start '${{ inputs.start }}'"
+          CMD="$CMD --end '${{ inputs.end }}'"
+          CMD="$CMD --chunk-size '${{ inputs.chunk_size || 'months' }}'"
+          CMD="$CMD --pipeline-name '${{ inputs.pipeline_name || 'klt-dev' }}'"
+          CMD="$CMD --destination '${{ vars.KLT_DESTINATION || 'postgres' }}'"
+          CMD="$CMD --dataset-name '${{ inputs.dataset_name || 'kobo_dev' }}'"
+          CMD="$CMD --write-disposition '${{ inputs.write_disposition || 'merge' }}'"
+          CMD="$CMD --progress '${{ vars.KLT_PROGRESS || 'log' }}'"
+
+          az container create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --image ${{ env.IMAGE_NAME }} \
+            --os-type Linux \
+            --cpu ${{ vars.AZURE_CONTAINER_CPU || '4' }} \
+            --memory ${{ vars.AZURE_CONTAINER_MEMORY || '16' }} \
+            --restart-policy Never \
+            --location ${{ env.AZURE_LOCATION }} \
+            --azure-file-volume-account-name ${{ secrets.AZURE_STORAGE_ACCOUNT }} \
+            --azure-file-volume-account-key ${{ secrets.AZURE_STORAGE_KEY }} \
+            --azure-file-volume-share-name ${{ secrets.AZURE_FILE_SHARE }} \
+            --azure-file-volume-mount-path /app/klt_pipelines \
+            --environment-variables \
+              DLT_DATA_DIR=/app/klt_pipelines \
+              KLT_LOG_DIR=/app/klt_pipelines/logs/${{ env.PIPELINE_NAME }}/${{ github.run_id }} \
+              DESTINATION__POSTGRES__CREDENTIALS__PORT=${{ secrets.POSTGRES_PORT || '5432' }} \
+              DESTINATION__POSTGRES__CREDENTIALS__CONNECT_TIMEOUT=${{ vars.POSTGRES_CONNECT_TIMEOUT || '15' }} \
+            --secure-environment-variables \
+              SOURCES__KOBO_SERVER="${{ secrets.KOBO_SERVER }}" \
+              SOURCES__KOBO_TOKEN="${{ secrets.KOBO_TOKEN }}" \
+              SOURCES__KOBO_PROJECT_VIEW="${{ secrets.KOBO_PROJECT_VIEW }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__DATABASE="${{ secrets.POSTGRES_DATABASE }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__USERNAME="${{ secrets.POSTGRES_USERNAME }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__PASSWORD="${{ secrets.POSTGRES_PASSWORD }}" \
+              DESTINATION__POSTGRES__CREDENTIALS__HOST="${{ secrets.POSTGRES_HOST }}" \
+            --command-line "$CMD"
+
+      - name: Wait for container completion
+        run: |
+          echo "⏳ Waiting for container to complete..."
+          while true; do
+            STATE=$(az container show \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --name ${{ env.CONTAINER_NAME }} \
+              --query "instanceView.state" -o tsv)
+
+            echo "Container state: $STATE"
+
+            if [ "$STATE" = "Succeeded" ] || [ "$STATE" = "Failed" ] || [ "$STATE" = "Terminated" ]; then
+              break
+            fi
+
+            sleep 10
+          done
+
+      - name: Get container logs
+        if: always()
+        run: |
+          echo "📋 Container logs:"
+          az container logs \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }}
+
+      - name: Check container exit code
+        if: always()
+        run: |
+          EXIT_CODE=$(az container show \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --query "containers[0].instanceView.currentState.exitCode" -o tsv)
+
+          echo "Container exit code: $EXIT_CODE"
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "❌ Pipeline failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+          echo "✅ Pipeline completed successfully"
+
+      - name: Delete container
+        if: always()
+        run: |
+          az container delete \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --yes
