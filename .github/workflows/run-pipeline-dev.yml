@@ -8,24 +8,12 @@ on:
         description: 'Submission time start (YYYY-MM-DD or ISO 8601)'
         required: false
         type: string
-      submission_time_end:
-        description: 'Submission time end (YYYY-MM-DD or ISO 8601)'
-        required: false
-        type: string
       asset_last_submission_start:
         description: 'Asset last submission start (YYYY-MM-DD or ISO 8601)'
         required: false
         type: string
-      asset_last_submission_end:
-        description: 'Asset last submission end (YYYY-MM-DD or ISO 8601)'
-        required: false
-        type: string
       asset_modified_start:
         description: 'Asset modified start (YYYY-MM-DD or ISO 8601)'
-        required: false
-        type: string
-      asset_modified_end:
-        description: 'Asset modified end (YYYY-MM-DD or ISO 8601)'
         required: false
         type: string
       pipeline_name:
@@ -71,53 +59,32 @@ jobs:
       - name: Set environment variables
         id: set-env
         run: |
-          # Set pipeline config parameters
-          echo "KLT_PIPELINE_NAME=${{ env.PIPELINE_NAME }}" >> $GITHUB_ENV
-          echo "KLT_DATASET_NAME=${{ inputs.dataset_name || 'kobo_dev' }}" >> $GITHUB_ENV
-          echo "KLT_WRITE_DISPOSITION=${{ inputs.write_disposition || 'merge' }}" >> $GITHUB_ENV
-
-          # Set date parameters (only if provided)
-          if [ -n "${{ inputs.submission_time_start }}" ]; then
-            echo "KLT_SUBMISSION_TIME_START=${{ inputs.submission_time_start }}" >> $GITHUB_ENV
-          fi
-          if [ -n "${{ inputs.submission_time_end }}" ]; then
-            echo "KLT_SUBMISSION_TIME_END=${{ inputs.submission_time_end }}" >> $GITHUB_ENV
-          fi
-          if [ -n "${{ inputs.asset_last_submission_start }}" ]; then
-            echo "KLT_ASSET_LAST_SUBMISSION_START=${{ inputs.asset_last_submission_start }}" >> $GITHUB_ENV
-          fi
-          if [ -n "${{ inputs.asset_last_submission_end }}" ]; then
-            echo "KLT_ASSET_LAST_SUBMISSION_END=${{ inputs.asset_last_submission_end }}" >> $GITHUB_ENV
-          fi
-          if [ -n "${{ inputs.asset_modified_start }}" ]; then
-            echo "KLT_ASSET_MODIFIED_START=${{ inputs.asset_modified_start }}" >> $GITHUB_ENV
-          fi
-          if [ -n "${{ inputs.asset_modified_end }}" ]; then
-            echo "KLT_ASSET_MODIFIED_END=${{ inputs.asset_modified_end }}" >> $GITHUB_ENV
-          fi
+          # Set required environment variables for dlt and secrets
+          echo "KLT_DESTINATION=${{ vars.KLT_DESTINATION || 'postgres' }}" >> $GITHUB_ENV
+          echo "KLT_PROGRESS=${{ vars.KLT_PROGRESS || 'log' }}" >> $GITHUB_ENV
+          echo "DLT_DATA_DIR=/app/klt_pipelines" >> $GITHUB_ENV
+          echo "KLT_LOG_DIR=/app/klt_pipelines/logs/${{ env.PIPELINE_NAME }}/${{ github.run_id }}" >> $GITHUB_ENV
 
       - name: Create Azure Container Instance
         run: |
-          # Build environment variables array, only including datetime vars if they're set
-          ENV_VARS=(
-            "KLT_PIPELINE_NAME=${{ env.KLT_PIPELINE_NAME }}"
-            "KLT_DESTINATION=${{ vars.KLT_DESTINATION || 'postgres' }}"
-            "KLT_DATASET_NAME=${{ env.KLT_DATASET_NAME }}"
-            "KLT_WRITE_DISPOSITION=${{ env.KLT_WRITE_DISPOSITION }}"
-            "KLT_PROGRESS=${{ vars.KLT_PROGRESS || 'log' }}"
-            "DLT_DATA_DIR=/app/klt_pipelines"
-            "KLT_LOG_DIR=/app/klt_pipelines/logs/${{ env.PIPELINE_NAME }}/${{ github.run_id }}"
-            "DESTINATION__POSTGRES__CREDENTIALS__PORT=${{ secrets.POSTGRES_PORT || '5432' }}"
-            "DESTINATION__POSTGRES__CREDENTIALS__CONNECT_TIMEOUT=${{ vars.POSTGRES_CONNECT_TIMEOUT || '15' }}"
-          )
+          # Build CLI command with explicit arguments
+          CMD="klt run incremental"
+          CMD="$CMD --pipeline-name '${{ inputs.pipeline_name || 'klt-dev' }}'"
+          CMD="$CMD --destination '${{ vars.KLT_DESTINATION || 'postgres' }}'"
+          CMD="$CMD --dataset-name '${{ inputs.dataset_name || 'kobo_dev' }}'"
+          CMD="$CMD --write-disposition '${{ inputs.write_disposition || 'merge' }}'"
+          CMD="$CMD --progress '${{ vars.KLT_PROGRESS || 'log' }}'"
 
-          # Add optional datetime parameters only if they exist
-          [ -n "${{ env.KLT_SUBMISSION_TIME_START }}" ] && ENV_VARS+=("KLT_SUBMISSION_TIME_START=${{ env.KLT_SUBMISSION_TIME_START }}")
-          [ -n "${{ env.KLT_SUBMISSION_TIME_END }}" ] && ENV_VARS+=("KLT_SUBMISSION_TIME_END=${{ env.KLT_SUBMISSION_TIME_END }}")
-          [ -n "${{ env.KLT_ASSET_LAST_SUBMISSION_START }}" ] && ENV_VARS+=("KLT_ASSET_LAST_SUBMISSION_START=${{ env.KLT_ASSET_LAST_SUBMISSION_START }}")
-          [ -n "${{ env.KLT_ASSET_LAST_SUBMISSION_END }}" ] && ENV_VARS+=("KLT_ASSET_LAST_SUBMISSION_END=${{ env.KLT_ASSET_LAST_SUBMISSION_END }}")
-          [ -n "${{ env.KLT_ASSET_MODIFIED_START }}" ] && ENV_VARS+=("KLT_ASSET_MODIFIED_START=${{ env.KLT_ASSET_MODIFIED_START }}")
-          [ -n "${{ env.KLT_ASSET_MODIFIED_END }}" ] && ENV_VARS+=("KLT_ASSET_MODIFIED_END=${{ env.KLT_ASSET_MODIFIED_END }}")
+          # Add optional datetime parameters if provided
+          if [ -n "${{ inputs.submission_time_start }}" ]; then
+            CMD="$CMD --submission-time-start '${{ inputs.submission_time_start }}'"
+          fi
+          if [ -n "${{ inputs.asset_last_submission_start }}" ]; then
+            CMD="$CMD --asset-last-submission-start '${{ inputs.asset_last_submission_start }}'"
+          fi
+          if [ -n "${{ inputs.asset_modified_start }}" ]; then
+            CMD="$CMD --asset-modified-start '${{ inputs.asset_modified_start }}'"
+          fi
 
           az container create \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
@@ -132,7 +99,11 @@ jobs:
             --azure-file-volume-account-key ${{ secrets.AZURE_STORAGE_KEY }} \
             --azure-file-volume-share-name ${{ secrets.AZURE_FILE_SHARE }} \
             --azure-file-volume-mount-path /app/klt_pipelines \
-            --environment-variables "${ENV_VARS[@]}" \
+            --environment-variables \
+              DLT_DATA_DIR=/app/klt_pipelines \
+              KLT_LOG_DIR=/app/klt_pipelines/logs/${{ env.PIPELINE_NAME }}/${{ github.run_id }} \
+              DESTINATION__POSTGRES__CREDENTIALS__PORT=${{ secrets.POSTGRES_PORT || '5432' }} \
+              DESTINATION__POSTGRES__CREDENTIALS__CONNECT_TIMEOUT=${{ vars.POSTGRES_CONNECT_TIMEOUT || '15' }} \
             --secure-environment-variables \
               SOURCES__KOBO_SERVER="${{ secrets.KOBO_SERVER }}" \
               SOURCES__KOBO_TOKEN="${{ secrets.KOBO_TOKEN }}" \
@@ -141,7 +112,7 @@ jobs:
               DESTINATION__POSTGRES__CREDENTIALS__USERNAME="${{ secrets.POSTGRES_USERNAME }}" \
               DESTINATION__POSTGRES__CREDENTIALS__PASSWORD="${{ secrets.POSTGRES_PASSWORD }}" \
               DESTINATION__POSTGRES__CREDENTIALS__HOST="${{ secrets.POSTGRES_HOST }}" \
-            --command-line "klt run incremental"
+            --command-line "$CMD"
 
       - name: Wait for container completion
         run: |
