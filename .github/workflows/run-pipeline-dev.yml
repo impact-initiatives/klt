@@ -114,31 +114,54 @@ jobs:
               DESTINATION__POSTGRES__CREDENTIALS__HOST="${{ secrets.POSTGRES_HOST }}" \
             --command-line "$CMD"
 
-      - name: Wait for container completion
+      - name: Follow container logs
         run: |
-          echo "⏳ Waiting for container to complete..."
+          echo "📋 Following container logs..."
+
+          # Wait for container to start
+          echo "Waiting for container to start..."
+          for i in {1..30}; do
+            STATE=$(az container show \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --name ${{ env.CONTAINER_NAME }} \
+              --query "instanceView.state" -o tsv 2>/dev/null || echo "Pending")
+
+            echo "Container state: $STATE"
+
+            if [ "$STATE" = "Running" ] || [ "$STATE" = "Succeeded" ] || [ "$STATE" = "Failed" ] || [ "$STATE" = "Terminated" ]; then
+              break
+            fi
+
+            sleep 2
+          done
+
+          # Follow logs in background and poll for completion
+          az container logs \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --follow &
+
+          LOG_PID=$!
+
+          # Poll container state
           while true; do
             STATE=$(az container show \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
               --name ${{ env.CONTAINER_NAME }} \
-              --query "instanceView.state" -o tsv)
-
-            echo "Container state: $STATE"
+              --query "instanceView.state" -o tsv 2>/dev/null || echo "Unknown")
 
             if [ "$STATE" = "Succeeded" ] || [ "$STATE" = "Failed" ] || [ "$STATE" = "Terminated" ]; then
+              echo ""
+              echo "Container finished with state: $STATE"
+              # Kill the log follow process
+              kill $LOG_PID 2>/dev/null || true
+              # Wait a moment for final logs to be available
+              sleep 2
               break
             fi
 
             sleep 10
           done
-
-      - name: Get container logs
-        if: always()
-        run: |
-          echo "📋 Container logs:"
-          az container logs \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --name ${{ env.CONTAINER_NAME }}
 
       - name: Check container exit code
         if: always()
