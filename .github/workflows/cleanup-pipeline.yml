@@ -1,0 +1,79 @@
+name: Cleanup Pipeline State
+run-name: Drop pending packages for ${{ inputs.pipeline_name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      pipeline_name:
+        description: 'Pipeline name to clean up'
+        required: true
+        type: string
+        default: 'klt-dev'
+
+env:
+  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'switzerlandnorth' }}
+  CONTAINER_NAME: cleanup-${{ github.run_id }}
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/klt:dev
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Run cleanup container
+        run: |
+          az container create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --image ${{ env.IMAGE_NAME }} \
+            --os-type Linux \
+            --cpu 1 \
+            --memory 2 \
+            --restart-policy Never \
+            --location ${{ env.AZURE_LOCATION }} \
+            --azure-file-volume-account-name ${{ secrets.AZURE_STORAGE_ACCOUNT }} \
+            --azure-file-volume-account-key ${{ secrets.AZURE_STORAGE_KEY }} \
+            --azure-file-volume-share-name ${{ secrets.AZURE_FILE_SHARE }} \
+            --azure-file-volume-mount-path /app/klt_pipelines \
+            --environment-variables \
+              DLT_DATA_DIR=/app/klt_pipelines \
+            --command-line "dlt pipeline ${{ inputs.pipeline_name }} drop-pending-packages"
+
+      - name: Wait and show logs
+        run: |
+          echo "📋 Waiting for cleanup to complete..."
+          sleep 5
+
+          az container logs \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }}
+
+      - name: Check container exit code
+        if: always()
+        run: |
+          EXIT_CODE=$(az container show \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --query "containers[0].instanceView.currentState.exitCode" -o tsv)
+
+          echo "Cleanup exit code: $EXIT_CODE"
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "❌ Cleanup failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+          echo "✅ Cleanup completed successfully"
+
+      - name: Delete cleanup container
+        if: always()
+        run: |
+          az container delete \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --yes
