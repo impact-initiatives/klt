@@ -146,4 +146,10 @@ def load_kobo(
         write_disposition=write_disposition,
     )
     last_trace = pipeline.last_trace
-    pipeline.run([last_trace], table_name="trace", write_disposition="append")
+    trace_pipeline = dlt.pipeline(
+        pipeline_name=f"{pipeline_name}_trace",
+        destination=destination_config,
+        dataset_name=f"{dataset_name}_trace",
+        progress=progress,
+    )
+    trace_pipeline.run([last_trace], table_name="trace", write_disposition="append")
