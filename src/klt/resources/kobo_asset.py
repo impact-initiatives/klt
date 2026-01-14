@@ -28,7 +28,7 @@ def make_resource_kobo_asset(
     kobo_client: RESTClient,
     kobo_project_view_uid: str,
     resource_name: str = "kobo_asset",
-    page_size: int = 5000,
+    page_size: int = 1000,
     parallelized: bool = True,
     selected: bool = True,
 ) -> DltResource:

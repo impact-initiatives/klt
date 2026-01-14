@@ -70,7 +70,7 @@ def make_resource_kobo_submission(
 
     @dlt.transformer(
         data_from=kobo_asset,
-        parallelized=False,
+        parallelized=True,
         name="kobo_submission",
         primary_key=["_id", "_uuid"],
     )
