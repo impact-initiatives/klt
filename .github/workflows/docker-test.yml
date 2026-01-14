@@ -9,7 +9,7 @@ on:
         required: false
         type: string
       tag_suffix:
-        description: 'Custom tag suffix (e.g., "perf-test")'
+        description: 'Docker tag to create (e.g., "test", "perf-test" - NO slashes allowed)'
         required: false
         type: string
         default: 'test'

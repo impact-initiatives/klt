@@ -56,3 +56,22 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Output image tags
+        run: |
+          BRANCH="${{ inputs.branch || github.ref_name }}"
+
+          echo "## 🐳 Built and pushed dev image" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`$BRANCH\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Primary Tag:** \`${{ secrets.DOCKERHUB_USERNAME }}/klt:dev\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**All Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Go to Actions → Run KLT Pipeline (Batch) or Run KLT Pipeline (Dev)" >> $GITHUB_STEP_SUMMARY
+          echo "2. Set \`image_tag\` input to: \`dev\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Trigger workflow to run pipeline with this image" >> $GITHUB_STEP_SUMMARY

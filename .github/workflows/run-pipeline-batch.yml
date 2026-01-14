@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Docker image tag to use (e.g., dev, test, test-feature-name)'
+        description: 'Docker image tag (NOT branch name - use "dev" or "test" or custom tag from docker-test workflow)'
         required: false
         type: string
         default: 'dev'
