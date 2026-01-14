@@ -4,6 +4,11 @@ run-name: Run batch backfill pipeline on Azure Container Instance
 on:
   workflow_dispatch:
     inputs:
+      image_tag:
+        description: 'Docker image tag to use (e.g., dev, test, test-feature-name)'
+        required: false
+        type: string
+        default: 'dev'
       start:
         description: 'Start date for asset discovery (YYYY-MM-DD or ISO 8601)'
         required: true
@@ -48,7 +53,7 @@ env:
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'switzerlandnorth' }}
   PIPELINE_NAME: ${{ inputs.pipeline_name || 'klt-dev' }}
   CONTAINER_NAME: ${{ github.run_id }}-${{ inputs.pipeline_name || 'klt-dev' }}
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/klt:dev
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/klt:${{ inputs.image_tag || 'dev' }}
 
 jobs:
   run-pipeline:

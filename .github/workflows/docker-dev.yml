@@ -1,11 +1,17 @@
 name: Docker Dev (Hub)
-run-name: Build & push dev image
+run-name: Build & push dev image from ${{ inputs.branch || 'develop' }}
 
 on:
   push:
     branches:
       - develop
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build from (defaults to develop)'
+        required: false
+        type: string
+        default: 'develop'
 
 env:
   IMAGE_NAME: klt
@@ -19,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

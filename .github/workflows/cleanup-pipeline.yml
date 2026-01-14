@@ -9,12 +9,17 @@ on:
         required: true
         type: string
         default: 'klt-dev'
+      image_tag:
+        description: 'Docker image tag to use (e.g., dev, test)'
+        required: false
+        type: string
+        default: 'dev'
 
 env:
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'switzerlandnorth' }}
   CONTAINER_NAME: cleanup-${{ github.run_id }}
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/klt:dev
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/klt:${{ inputs.image_tag || 'dev' }}
 
 jobs:
   cleanup:
