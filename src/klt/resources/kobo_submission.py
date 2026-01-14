@@ -72,7 +72,7 @@ def make_resource_kobo_submission(
         data_from=kobo_asset,
         parallelized=True,
         name="kobo_submission",
-        primary_key=["_id", "_uuid"],
+        primary_key=["_id"],
     )
     def kobo_submission(
         asset,
