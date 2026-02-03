@@ -184,6 +184,18 @@ jobs:
           fi
           echo "✅ Pipeline completed successfully"
 
+      - name: Trigger Matryoshka dbt run
+        if: success()
+        env:
+          MATRYOSHKA_TOKEN: ${{ secrets.MATRYOSHKA_WORKFLOW_TOKEN }}
+        run: |
+          curl -sS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $MATRYOSHKA_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/impact-initiatives/matryoshka/actions/workflows/run-dbt-aci.yml/dispatches \
+            -d '{"ref":"main"}'
+
       - name: Delete container
         if: always()
         run: |
