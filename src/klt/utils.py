@@ -432,7 +432,7 @@ def build_audit_log_filter_from_hint(hint: Incremental) -> dict[str, str] | None
 
     Note:
         - Only "date_created" cursor is supported in this helper
-        - Timestamps are formatted as ISO 8601 strings with timezone
+        - Dates are formatted as ISO 8601 date strings (YYYY-MM-DD) without time or timezone component
 
     Example:
         >>> @dlt.resource
