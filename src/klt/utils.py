@@ -405,6 +405,61 @@ def build_asset_filter_from_hint(
     return {"q": date_filter}
 
 
+def build_audit_log_filter_from_hint(hint: Incremental) -> dict[str, str] | None:
+    """Build API query filter for kobo_audit_log resource from dlt incremental hint.
+
+    Constructs server-side filters for KoboToolbox audit log API based on
+    incremental configuration using query string syntax. This helper only
+    supports the date_created cursor even though the audit log API accepts
+    additional filters.
+
+    Args:
+        hint: dlt incremental hint with cursor configuration
+
+    Returns:
+        Dictionary with query parameters for API request, or None if the cursor
+        field doesn't support server-side filtering.
+
+        Example return value:
+        {
+            "q": "date_created__gte:2026-01-02"
+        }
+
+        Or with end_value:
+        {
+            "q": "date_created__gte:2026-01-02 AND date_created__lte:2026-01-31"
+        }
+
+    Note:
+        - Only "date_created" cursor is supported in this helper
+        - Dates are formatted as ISO 8601 date strings (YYYY-MM-DD) without time or timezone component
+
+    Example:
+        >>> @dlt.resource
+        >>> def kobo_audit_log():
+        >>>     hint = get_current_hint()
+        >>>     if hint is not None:
+        >>>         params = build_audit_log_filter_from_hint(hint)
+        >>>         # Returns: {"q": "date_created__gte:2026-01-01"}
+    """
+    cursor_name = hint.get_cursor_column_name()
+
+    if cursor_name != "date_created":
+        return None
+
+    start_value = hint.start_value
+    if start_value is None:
+        return None
+
+    start_timestamp = pendulum.instance(start_value).date()
+    date_filter = f"date_created__gte:{start_timestamp}"
+
+    if hint.end_value is not None:
+        end_timestamp = pendulum.instance(hint.end_value).date()
+        date_filter = f"{date_filter} AND date_created__lte:{end_timestamp}"
+    return {"q": date_filter}
+
+
 def build_submission_filter_from_hint(
     hint: Incremental,
 ) -> dict[str, str] | None:

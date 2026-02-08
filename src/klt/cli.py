@@ -1,15 +1,20 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional, cast
 
 import dlt
 import pendulum
 import typer
 from rich.progress import track
 
+from dlt.common.schema.typing import TWriteDispositionConfig
+
+from .kobo_audit_log_pipeline import load_kobo_audit_logs
 from .kobotoolbox_pipeline import load_kobo
 from .logging import logger
 from .settings import IncrementalSettings, PipelineSettings
 from .utils import make_time_batches
+
+ProgressArg = Literal["tqdm", "enlighten", "log", "alive_progress"]
 
 app = typer.Typer()
 dlt_run_app = typer.Typer(
@@ -230,6 +235,67 @@ def incremental(
         destination=destination,
         dataset_name=dataset_name,
         write_disposition=write_disposition,
+        progress=progress,
+    )
+
+
+@dlt_run_app.command(name="audit-log")
+def audit_log(
+    audit_log_time_start: datetime = typer.Option(
+        incremental_settings.audit_log_time_start or pendulum.now().start_of("day"),
+        "--audit-log-time-start",
+        help="Initial date for incremental loading of audit logs. "
+        "Only audit logs with date_created >= this value will be fetched on first run. "
+        "Defaults to today at 00:00:00. Can be set via KLT_AUDIT_LOG_TIME_START env var.",
+        rich_help_panel="Incremental Loading",
+    ),
+    audit_log_time_end: Optional[datetime] = typer.Option(
+        incremental_settings.audit_log_time_end,
+        "--audit-log-time-end",
+        help="Optional end date for incremental loading of audit logs. "
+        "Only audit logs with date_created <= this value will be fetched on first run. "
+        "Can be set via KLT_AUDIT_LOG_TIME_END env var.",
+        rich_help_panel="Incremental Loading",
+    ),
+    pipeline_name: str = typer.Option(
+        pipeline_settings.pipeline_name,
+        "--pipeline-name",
+        help="Name of the dlt pipeline instance used to store state and logs.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    destination: str = typer.Option(
+        pipeline_settings.destination,
+        "--destination",
+        help="Target destination for loaded data (postgres, duckdb, etc.).",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    dataset_name: str = typer.Option(
+        pipeline_settings.dataset_name,
+        "--dataset-name",
+        help="Name of the dataset/schema that will receive the loaded tables.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    write_disposition: str = typer.Option(
+        pipeline_settings.write_disposition,
+        "--write-disposition",
+        help="Write disposition: 'merge', 'replace', or 'append'.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+    progress: ProgressArg = typer.Option(
+        pipeline_settings.progress,
+        "--progress",
+        help="Progress reporting mode: 'log', 'enlighten', or 'alive'.",
+        rich_help_panel="Pipeline Configuration",
+    ),
+):
+    """Run the KoboToolbox audit log pipeline."""
+    load_kobo_audit_logs(
+        audit_log_time_start=audit_log_time_start,
+        audit_log_time_end=audit_log_time_end,
+        pipeline_name=pipeline_name,
+        destination=destination,
+        dataset_name=dataset_name,
+        write_disposition=cast(TWriteDispositionConfig, write_disposition),
         progress=progress,
     )
 
