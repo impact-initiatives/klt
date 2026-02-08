@@ -79,6 +79,8 @@ class IncrementalSettings(BaseSettings):
     asset_last_submission_end: datetime | None = None
     asset_modified_start: datetime | None = None
     asset_modified_end: datetime | None = None
+    audit_log_time_start: datetime | None = None
+    audit_log_time_end: datetime | None = None
 
     model_config = SettingsConfigDict(
         env_prefix="KLT_", env_file=".env", extra="ignore"

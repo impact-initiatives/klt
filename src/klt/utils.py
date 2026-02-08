@@ -422,12 +422,12 @@ def build_audit_log_filter_from_hint(hint: Incremental) -> dict[str, str] | None
 
         Example return value:
         {
-            "q": "date_created__gte:2026-01-02T00:00:00+00:00"
+            "q": "date_created__gte:2026-01-02"
         }
 
         Or with end_value:
         {
-            "q": "date_created__gte:2026-01-02T00:00:00+00:00 AND date_created__lte:2026-01-31T23:59:59+00:00"
+            "q": "date_created__gte:2026-01-02 AND date_created__lte:2026-01-31"
         }
 
     Note:
@@ -440,7 +440,7 @@ def build_audit_log_filter_from_hint(hint: Incremental) -> dict[str, str] | None
         >>>     hint = get_current_hint()
         >>>     if hint is not None:
         >>>         params = build_audit_log_filter_from_hint(hint)
-        >>>         # Returns: {"q": "date_created__gte:2026-01-01T00:00:00+00:00"}
+        >>>         # Returns: {"q": "date_created__gte:2026-01-01"}
     """
     cursor_name = hint.get_cursor_column_name()
 
@@ -451,12 +451,12 @@ def build_audit_log_filter_from_hint(hint: Incremental) -> dict[str, str] | None
     if start_value is None:
         return None
 
-    date_filter = f"date_created__gte:{start_value.isoformat()}"
+    start_timestamp = pendulum.instance(start_value).date()
+    date_filter = f"date_created__gte:{start_timestamp}"
 
     if hint.end_value is not None:
-        date_filter = (
-            f"{date_filter} AND date_created__lte:{hint.end_value.isoformat()}"
-        )
+        end_timestamp = pendulum.instance(hint.end_value).date()
+        date_filter = f"{date_filter} AND date_created__lte:{end_timestamp}"
     return {"q": date_filter}
 
 
