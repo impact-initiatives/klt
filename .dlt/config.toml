@@ -19,7 +19,7 @@ workers=20
 workers=6
 
 [load]
-workers=4
+workers=1
 truncate_staging_dataset=true
 
 [data_writer]
