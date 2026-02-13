@@ -144,6 +144,7 @@ def load_kobo(
             asset_modified_end=asset_modified_end,
         ),
         write_disposition=write_disposition,
+        loader_file_format="csv"
     )
     last_trace = pipeline.last_trace
     trace_pipeline = dlt.pipeline(
