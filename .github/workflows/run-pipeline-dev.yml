@@ -39,7 +39,7 @@ on:
           - merge
           - replace
           - append
-        default: 'merge'
+        default: 'append'
   schedule:
     # Run daily at 2 AM UTC
     - cron: '0 2 * * *'
