@@ -4,21 +4,23 @@ repos:
     hooks:
       - id: check-toml
       - id: check-yaml
-        args: ['--unsafe']
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.9
+    rev: v0.15.6
     hooks:
       - id: ruff-check
       - id: ruff-format
   - repo: https://github.com/crate-ci/typos
-    rev: typos-dict-v0.13.2
+    rev: v1.44.0
     hooks:
       - id: typos
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.24.1
+    rev: v0.25
     hooks:
       - id: validate-pyproject
-        additional_dependencies: ["validate-pyproject-schema-store[all]"]
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.14.0
+    hooks:
+      - id: hadolint-docker
