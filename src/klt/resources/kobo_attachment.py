@@ -11,11 +11,15 @@ from ..logging import logger_dlt
 def make_resource_kobo_audit_file(
     kobo_client: RESTClient,
     kobo_submission,
+    parallelized: bool = True,
+    selected: bool = False,
 ):
     @dlt.transformer(
         name="submission_audit",
         data_from=kobo_submission,
         primary_key=["_submission_id", "start"],
+        parallelized=parallelized,
+        selected=selected,
     )
     def kobo_audit(submission):
         audit_file = next(

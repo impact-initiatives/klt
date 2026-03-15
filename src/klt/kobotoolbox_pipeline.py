@@ -101,7 +101,9 @@ def kobo_source(
         submission_time_end=submission_time_end,
     )
 
-    kobo_audit_file = make_resource_kobo_audit_file(kobo_client, kobo_submission)
+    kobo_audit_file = make_resource_kobo_audit_file(
+        kobo_client, kobo_submission, selected=True
+    )
 
     return [  # type: ignore[return-value]
         kobo_asset_for_submissions,
