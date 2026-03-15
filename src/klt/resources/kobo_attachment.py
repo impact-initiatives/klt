@@ -12,25 +12,25 @@ def make_resource_kobo_audit_file(
     kobo_client: RESTClient,
     kobo_submission,
 ):
-    @dlt.transformer(name="audit", data_from=kobo_submission)
-    def kobo_audit(submissions):
-        # TODO: Include a submission identifier, and a a form identifier
-        for submission in submissions:
-            audit_file = next(
-                filter(
-                    lambda s: s.get("media_file_basename") == "audit.csv",
-                    submission.get("_attachments", []),
-                ),
-                None,
-            )
-            if audit_file:
-                path = audit_file["download_url"]
-                path = path.replace("?format=json", "")
-                response = kobo_client.get(path)
-                response.raise_for_status()
-                csv_content = pd.read_csv(BytesIO(response.content))
-                if not csv_content.empty:
-                    yield csv_content.to_dict(orient="records")
+    @dlt.transformer(name="submission_audit", data_from=kobo_submission)
+    def kobo_audit(submission):
+        audit_file = next(
+            (
+                a
+                for a in submission.get("_attachments", [])
+                if a.get("media_file_basename") == "audit.csv"
+            ),
+            None,
+        )
+        if audit_file:
+            path = audit_file["download_url"].replace("?format=json", "")
+            response = kobo_client.get(path)
+            response.raise_for_status()
+            csv_content = pd.read_csv(BytesIO(response.content))
+            if not csv_content.empty:
+                csv_content["_submission_id"] = submission["_id"]
+                csv_content["asset_uid"] = submission["asset_uid"]
+                yield csv_content.to_dict(orient="records")
 
     return kobo_audit
 
