@@ -8,6 +8,7 @@ from dlt.sources.helpers.rest_client.client import RESTClient
 from klt.resources import (
     make_last_submission_time_hint,
     make_resource_kobo_asset,
+    make_resource_kobo_audit_file,
     make_resource_kobo_submission,
 )
 from klt.resources.kobo_asset import (
@@ -100,11 +101,16 @@ def kobo_source(
         submission_time_end=submission_time_end,
     )
 
+    kobo_audit_file = make_resource_kobo_audit_file(
+        kobo_client, kobo_submission, selected=True
+    )
+
     return [  # type: ignore[return-value]
         kobo_asset_for_submissions,
         kobo_asset_for_content,
         kobo_submission,
         kobo_asset_content,
+        kobo_audit_file,
     ]
 
 

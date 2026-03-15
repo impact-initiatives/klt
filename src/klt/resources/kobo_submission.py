@@ -136,6 +136,7 @@ def transform_submission_data(data: dict):
             "__version__",
             "asset_uid",
             "_geolocation",
+            "_attachments",
         ]
     )
 
