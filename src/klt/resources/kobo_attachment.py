@@ -12,7 +12,11 @@ def make_resource_kobo_audit_file(
     kobo_client: RESTClient,
     kobo_submission,
 ):
-    @dlt.transformer(name="submission_audit", data_from=kobo_submission)
+    @dlt.transformer(
+        name="submission_audit",
+        data_from=kobo_submission,
+        primary_key=["_submission_id", "start"],
+    )
     def kobo_audit(submission):
         audit_file = next(
             (
