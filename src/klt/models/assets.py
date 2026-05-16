@@ -160,6 +160,6 @@ Asset.model_rebuild()
 
 
 __all__ = [
-    "ProjectViewAssetResponse",
     "Asset",
+    "ProjectViewAssetResponse",
 ]

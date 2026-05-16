@@ -55,6 +55,6 @@ class ProjectViewListResponse(BaseModel):
 
 __all__ = [
     "ProjectViewDisplaySettings",
-    "ProjectViewSettings",
     "ProjectViewListResponse",
+    "ProjectViewSettings",
 ]

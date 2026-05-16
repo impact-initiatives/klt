@@ -56,6 +56,6 @@ class KoboSubmission(BaseModel):
 
 
 __all__ = [
-    "SubmissionResponse",
     "KoboSubmission",
+    "SubmissionResponse",
 ]

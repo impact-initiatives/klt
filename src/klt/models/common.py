@@ -49,8 +49,8 @@ class Download(BaseModel):
 
 
 __all__ = [
-    "Sector",
     "CountryItem",
-    "PiiCollection",
     "Download",
+    "PiiCollection",
+    "Sector",
 ]
