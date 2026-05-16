@@ -1,6 +1,7 @@
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 import requests
 from loguru import logger
@@ -12,7 +13,7 @@ logger.remove()
 
 class InterceptHandler(logging.Handler):
     @logger.catch(default=True, onerror=lambda _: sys.exit(1))
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         # Get the corresponding Loguru level if it exists.
         try:
             level = logger.level(record.levelname).name
@@ -35,7 +36,7 @@ logger_dlt = logging.getLogger("dlt")
 logger_dlt.addHandler(InterceptHandler())
 
 
-def http_log(response: requests.Response, *args, **kwargs):
+def http_log(response: requests.Response, *args: Any, **kwargs: Any) -> requests.Response:
     logger_http.debug(
         f"{response.request.method} on {response.url} with status code {response.status_code}"
     )

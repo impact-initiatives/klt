@@ -1,19 +1,27 @@
+from __future__ import annotations
+
 from io import BytesIO
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse, urlunparse
 
 import dlt
 import pandas as pd
-from dlt.sources.helpers.rest_client.client import RESTClient
 
 from ..logging import logger_dlt
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from dlt.sources import DltResource
+    from dlt.sources.helpers.rest_client.client import RESTClient
 
 
 def make_resource_kobo_audit_file(
     kobo_client: RESTClient,
-    kobo_submission,
+    kobo_submission: DltResource,
     parallelized: bool = True,
     selected: bool = False,
-):
+) -> DltResource:
     """Create a DLT transformer for fetching submission audit trail CSV files.
 
     For each submission yielded by the parent kobo_submission resource,
@@ -65,7 +73,7 @@ def make_resource_kobo_audit_file(
         parallelized=parallelized,
         selected=selected,
     )
-    def kobo_audit(submission):
+    def kobo_audit(submission: dict[str, Any]) -> Iterator[Any]:
         audit_file = next(
             (
                 a

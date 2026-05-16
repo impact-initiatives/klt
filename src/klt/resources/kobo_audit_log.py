@@ -1,11 +1,10 @@
 """KoboToolbox audit log resource and incremental hint."""
 
-from datetime import datetime
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 import dlt
-from dlt.extract.incremental import Incremental
-from dlt.sources import DltResource
-from dlt.sources.helpers.rest_client.client import RESTClient
 
 from klt.utils import (
     build_audit_log_filter_from_hint,
@@ -14,6 +13,14 @@ from klt.utils import (
     make_kobo_pipeline_hooks,
     parse_timestamps,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from datetime import datetime
+
+    from dlt.extract.incremental import Incremental
+    from dlt.sources import DltResource
+    from dlt.sources.helpers.rest_client.client import RESTClient
 
 audit_log_hooks = make_kobo_pipeline_hooks(
     ignored_http_status_codes=[404], enable_http_logging=True
@@ -46,7 +53,7 @@ def make_resource_kobo_audit_log(
         parallelized=parallelized,
         selected=selected,
     )
-    def kobo_audit_log():
+    def kobo_audit_log() -> Iterator[Any]:
         path = "/api/v2/audit-logs/"
         params = {
             "format": "json",

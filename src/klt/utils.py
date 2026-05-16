@@ -9,16 +9,18 @@ import json
 from collections.abc import Callable, Iterable
 from datetime import datetime
 from itertools import pairwise
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import dlt
 import pendulum
 from dlt.extract.exceptions import CurrentSourceNotAvailable
 from dlt.extract.incremental import Incremental
-from dlt.sources import DltResource
 from dlt.sources.rest_api.config_setup import create_response_hooks
 from dlt.sources.rest_api.typing import ResponseAction
 from pendulum import DateTime, Interval
+
+if TYPE_CHECKING:
+    from dlt.sources import DltResource
 
 from .logging import http_log, logger
 
@@ -105,7 +107,7 @@ def make_kobo_pipeline_hooks(
     response_actions: list[ResponseAction] | None = None,
     ignored_http_status_codes: list[int] | None = None,
     enable_http_logging: bool = True,
-):
+) -> dict[str, list[Any]]:
     """Create HTTP response hooks for KoboToolbox API requests.
 
     Configures response handling behavior including logging and status code

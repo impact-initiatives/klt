@@ -4,12 +4,11 @@ This module provides DLT resources for fetching KoboToolbox assets (forms)
 from a project view, with optional incremental loading support.
 """
 
-from datetime import datetime
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 import dlt
-from dlt.extract.incremental import Incremental
-from dlt.sources import DltResource
-from dlt.sources.helpers.rest_client.client import RESTClient
 
 from klt.utils import (
     build_asset_filter_from_hint,
@@ -18,6 +17,14 @@ from klt.utils import (
     make_kobo_pipeline_hooks,
     parse_timestamps,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from datetime import datetime
+
+    from dlt.extract.incremental import Incremental
+    from dlt.sources import DltResource
+    from dlt.sources.helpers.rest_client.client import RESTClient
 
 asset_hooks = make_kobo_pipeline_hooks(
     ignored_http_status_codes=[404], enable_http_logging=True
@@ -74,7 +81,7 @@ def make_resource_kobo_asset(
         parallelized=parallelized,
         selected=selected,
     )
-    def kobo_asset():
+    def kobo_asset() -> Iterator[Any]:
         path = f"/api/v2/project-views/{kobo_project_view_uid}/assets/"
         params = {
             "format": "json",
@@ -159,7 +166,7 @@ def make_resource_kobo_asset_content(
         parallelized=parallelized,
         selected=selected,
     )
-    def kobo_asset_content(asset):
+    def kobo_asset_content(asset: dict[str, Any]) -> Iterator[Any]:
         asset_uid = asset["uid"]
         path = f"/api/v2/assets/{asset_uid}/content/"
 

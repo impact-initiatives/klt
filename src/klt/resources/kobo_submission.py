@@ -1,9 +1,9 @@
-from datetime import datetime
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 import dlt
 import orjson
-from dlt.extract.incremental import Incremental
-from dlt.sources.helpers.rest_client.client import RESTClient
 
 from klt.utils import (
     build_submission_filter_from_hint,
@@ -12,6 +12,14 @@ from klt.utils import (
     make_kobo_pipeline_hooks,
     parse_timestamps,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from datetime import datetime
+
+    from dlt.extract.incremental import Incremental
+    from dlt.sources import DltResource
+    from dlt.sources.helpers.rest_client.client import RESTClient
 
 submission_hooks = make_kobo_pipeline_hooks(
     ignored_http_status_codes=[404], enable_http_logging=True
@@ -59,11 +67,11 @@ def make_submission_time_hint(
 
 def make_resource_kobo_submission(
     kobo_client: RESTClient,
-    kobo_asset,
+    kobo_asset: DltResource,
     submission_time_start: datetime,
     submission_time_end: datetime | None = None,
     page_size: int = 1000,
-):
+) -> DltResource:
     submission_time_hint = make_submission_time_hint(
         submission_time_start, submission_time_end
     )
@@ -75,8 +83,8 @@ def make_resource_kobo_submission(
         primary_key=["_id"],
     )
     def kobo_submission(
-        asset,
-    ):
+        asset: dict[str, Any],
+    ) -> Iterator[Any]:
         asset_uid = asset["uid"]
 
         path = f"/api/v2/assets/{asset_uid}/data/"
@@ -101,7 +109,7 @@ def make_resource_kobo_submission(
     return kobo_submission
 
 
-def transform_submission_data(data: dict):
+def transform_submission_data(data: dict[str, Any]) -> dict[str, Any]:
     """Transform submission data into EAV (Entity-Attribute-Value) structure.
 
     Separates KoboToolbox metadata fields from survey question responses.
@@ -151,10 +159,7 @@ def transform_submission_data(data: dict):
             val[key] = value
         else:
             # Serialize complex types (lists, dicts) as JSON strings
-            if isinstance(value, (list, dict)):
-                response = orjson.dumps(value).decode("utf-8")
-            else:
-                response = value
+            response = orjson.dumps(value).decode("utf-8") if isinstance(value, (list, dict)) else value
             eav.append({"question": key, "response": response})
 
     val["responses"] = eav

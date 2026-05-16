@@ -1,11 +1,16 @@
-from datetime import datetime
-from typing import Literal, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal, cast
 
 import dlt
 import pendulum
 import typer
-from dlt.common.schema.typing import TWriteDispositionConfig
 from rich.progress import track
+
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from dlt.common.schema.typing import TWriteDispositionConfig
 
 from .kobo_audit_log_pipeline import load_kobo_audit_logs
 from .kobotoolbox_pipeline import load_kobo
@@ -30,7 +35,7 @@ incremental_settings = IncrementalSettings()
 
 
 @dlt_run_app.callback()
-def run_callback(ctx: typer.Context):
+def run_callback(ctx: typer.Context) -> None:
     """
     Run the KoboToolbox data pipeline.
 
@@ -48,17 +53,23 @@ def batch(
     start: datetime = typer.Option(
         ...,
         "--start",
-        help="Start date for asset discovery (inclusive). Assets with last_submission_time or date_modified >= this date will be discovered.",
+        help=(
+            "Start date for asset discovery (inclusive). Assets with last_submission_time"
+            " or date_modified >= this date will be discovered."
+        ),
     ),
     end: datetime = typer.Option(
         ...,
         "--end",
-        help="End date for asset discovery (inclusive). Assets with last_submission_time or date_modified <= this date will be discovered.",
+        help=(
+            "End date for asset discovery (inclusive). Assets with last_submission_time"
+            " or date_modified <= this date will be discovered."
+        ),
     ),
     chunk_size: Literal["years", "months", "weeks", "days", "hours"] = typer.Option(
         "months",
         "--chunk-size",
-        help="Size of each time batch. The date range [start, end] will be divided into non-overlapping chunks of this size.",
+        help="Size of each time batch. The date range [start, end] will be divided into non-overlapping chunks.",
     ),
     pipeline_name: str = typer.Option(
         pipeline_settings.pipeline_name,
@@ -90,7 +101,7 @@ def batch(
         help="Progress reporting mode.",
         rich_help_panel="Pipeline Configuration",
     ),
-):
+) -> None:
     """
     Run the pipeline in batch mode to backfill historical data in chunks.
 
@@ -118,7 +129,7 @@ def batch(
     total_batches = len(batching_ranges)
 
     # Baseline date for loading ALL submissions (effectively unbounded)
-    submission_baseline = datetime(1970, 1, 1)
+    submission_baseline = pendulum.datetime(1970, 1, 1, tz="UTC")
     submission_end = pendulum.now()
 
     # Track if any batch failed
@@ -216,7 +227,7 @@ def incremental(
         help="Progress reporting mode: 'log', 'enlighten', or 'alive'.",
         rich_help_panel="Pipeline Configuration",
     ),
-):
+) -> None:
     """
     Run the KoboToolbox data pipeline to extract and load data.
 
@@ -286,7 +297,7 @@ def audit_log(
         help="Progress reporting mode: 'log', 'enlighten', or 'alive'.",
         rich_help_panel="Pipeline Configuration",
     ),
-):
+) -> None:
     """Run the KoboToolbox audit log pipeline."""
     load_kobo_audit_logs(
         audit_log_time_start=audit_log_time_start,
@@ -294,7 +305,7 @@ def audit_log(
         pipeline_name=pipeline_name,
         destination=destination,
         dataset_name=dataset_name,
-        write_disposition=cast(TWriteDispositionConfig, write_disposition),
+        write_disposition=cast("TWriteDispositionConfig", write_disposition),
         progress=progress,
     )
 
@@ -306,7 +317,7 @@ def drop(
         "--pipeline-name",
         help="Name of the dlt pipeline instance to drop.",
     ),
-):
+) -> None:
     """Drop the pipeline state and data."""
     pipeline = dlt.pipeline(pipeline_name=pipeline_name)
     pipeline.drop()
