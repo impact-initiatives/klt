@@ -1,12 +1,11 @@
 from datetime import datetime
-from typing import Literal, Optional, cast
+from typing import Literal, cast
 
 import dlt
 import pendulum
 import typer
-from rich.progress import track
-
 from dlt.common.schema.typing import TWriteDispositionConfig
+from rich.progress import track
 
 from .kobo_audit_log_pipeline import load_kobo_audit_logs
 from .kobotoolbox_pipeline import load_kobo
@@ -249,7 +248,7 @@ def audit_log(
         "Defaults to today at 00:00:00. Can be set via KLT_AUDIT_LOG_TIME_START env var.",
         rich_help_panel="Incremental Loading",
     ),
-    audit_log_time_end: Optional[datetime] = typer.Option(
+    audit_log_time_end: datetime | None = typer.Option(
         incremental_settings.audit_log_time_end,
         "--audit-log-time-end",
         help="Optional end date for incremental loading of audit logs. "

@@ -6,9 +6,10 @@ KoboToolbox API data.
 
 import functools
 import json
+from collections.abc import Callable, Iterable
 from datetime import datetime
 from itertools import pairwise
-from typing import Any, Callable, Iterable, Literal
+from typing import Any, Literal
 
 import dlt
 import pendulum
