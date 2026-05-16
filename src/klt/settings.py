@@ -90,7 +90,7 @@ class IncrementalSettings(BaseSettings):
 class LoggingSettings(BaseSettings):
     """Application logging configuration."""
 
-    log_dir: pathlib.Path = pathlib.Path(".")
+    log_dir: pathlib.Path = pathlib.Path()
 
     model_config = SettingsConfigDict(
         env_prefix="KLT_", env_file=".env", extra="ignore"
