@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
 import dlt
@@ -14,7 +15,6 @@ from klt.utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
     from datetime import datetime
 
     from dlt.extract.incremental import Incremental

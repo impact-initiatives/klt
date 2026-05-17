@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse, urlunparse
@@ -10,7 +11,6 @@ import pandas as pd
 from ..logging import logger_dlt
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
 
     from dlt.sources import DltResource
     from dlt.sources.helpers.rest_client.client import RESTClient

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING, Literal, cast
 
 import dlt
@@ -8,8 +9,6 @@ import typer
 from rich.progress import track
 
 if TYPE_CHECKING:
-    from datetime import datetime
-
     from dlt.common.schema.typing import TWriteDispositionConfig
 
 from .kobo_audit_log_pipeline import load_kobo_audit_logs

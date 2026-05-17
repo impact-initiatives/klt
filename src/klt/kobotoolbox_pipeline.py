@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from datetime import datetime
 
 import dlt
 from dlt.destinations import postgres as postgres_destination
-
-if TYPE_CHECKING:
-    from datetime import datetime
-
-    from dlt.extract.source import DltSource
-    from dlt.sources.helpers.rest_client.client import RESTClient
+from dlt.extract.source import DltSource
+from dlt.sources.helpers.rest_client.client import RESTClient
 
 from klt.resources import (
     make_last_submission_time_hint,

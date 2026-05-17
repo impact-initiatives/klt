@@ -1,16 +1,16 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING, Literal
 
 import dlt
 from dlt.destinations import postgres as postgres_destination
 
 if TYPE_CHECKING:
-    from datetime import datetime
-
     from dlt.common.schema.typing import TWriteDispositionConfig
-    from dlt.extract.source import DltSource
-    from dlt.sources.helpers.rest_client.client import RESTClient
+
+from dlt.extract.source import DltSource
+from dlt.sources.helpers.rest_client.client import RESTClient
 
 from klt.resources import make_audit_log_time_hint, make_resource_kobo_audit_log
 from klt.rest_client import make_rest_client
