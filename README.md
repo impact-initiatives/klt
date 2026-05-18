@@ -1,4 +1,4 @@
-# klt (Kobotoolobx Load Tool)
+# klt (Kobotoolbox Load Tool)
 
 [![Run KLT Audit Log Pipeline (Dev)](https://github.com/impact-initiatives/klt/actions/workflows/run-audit-log.yml/badge.svg)](https://github.com/impact-initiatives/klt/actions/workflows/run-audit-log.yml)
 [![Run KLT Pipeline (Dev)](https://github.com/impact-initiatives/klt/actions/workflows/run-pipeline-dev.yml/badge.svg)](https://github.com/impact-initiatives/klt/actions/workflows/run-pipeline-dev.yml)
