@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 from .kobo_audit_log_pipeline import load_kobo_audit_logs
 from .kobotoolbox_pipeline import load_kobo
 from .logging import logger
-from .settings import IncrementalSettings, PipelineSettings
+from .settings import AssetFilterSettings, IncrementalSettings, PipelineSettings
 from .utils import make_time_batches
 
 ProgressArg = Literal["tqdm", "enlighten", "log", "alive_progress"]
@@ -31,6 +31,7 @@ app.add_typer(dlt_run_app)
 # Load settings
 pipeline_settings = PipelineSettings()
 incremental_settings = IncrementalSettings()
+asset_filter_settings = AssetFilterSettings()
 
 
 @dlt_run_app.callback()
@@ -100,6 +101,21 @@ def batch(
         help="Progress reporting mode.",
         rich_help_panel="Pipeline Configuration",
     ),
+    included_asset_uid: list[str] = typer.Option(
+        asset_filter_settings.included_asset_uids,
+        "--included-asset-uid",
+        help="Restrict asset discovery to only these asset UIDs (repeatable). Mutually exclusive "
+        "with --excluded-asset-uid. Can be set via KLT_INCLUDED_ASSET_UIDS env var.",
+        rich_help_panel="Asset Filtering",
+    ),
+    excluded_asset_uid: list[str] = typer.Option(
+        asset_filter_settings.excluded_asset_uids,
+        "--excluded-asset-uid",
+        help="Exclude these asset UIDs from discovery (repeatable), e.g. to skip assets whose "
+        "deployment size triggers 429/5xx errors from the API. Mutually exclusive with "
+        "--included-asset-uid. Can be set via KLT_EXCLUDED_ASSET_UIDS env var.",
+        rich_help_panel="Asset Filtering",
+    ),
 ) -> None:
     """
     Run the pipeline in batch mode to backfill historical data in chunks.
@@ -155,6 +171,8 @@ def batch(
                 dataset_name=dataset_name,
                 write_disposition=write_disposition,
                 progress=progress,
+                included_asset_uids=included_asset_uid or None,
+                excluded_asset_uids=excluded_asset_uid or None,
             )
         except Exception as e:
             failed = True
@@ -226,6 +244,21 @@ def incremental(
         help="Progress reporting mode: 'log', 'enlighten', or 'alive'.",
         rich_help_panel="Pipeline Configuration",
     ),
+    included_asset_uid: list[str] = typer.Option(
+        asset_filter_settings.included_asset_uids,
+        "--included-asset-uid",
+        help="Restrict asset discovery to only these asset UIDs (repeatable). Mutually exclusive "
+        "with --excluded-asset-uid. Can be set via KLT_INCLUDED_ASSET_UIDS env var.",
+        rich_help_panel="Asset Filtering",
+    ),
+    excluded_asset_uid: list[str] = typer.Option(
+        asset_filter_settings.excluded_asset_uids,
+        "--excluded-asset-uid",
+        help="Exclude these asset UIDs from discovery (repeatable), e.g. to skip assets whose "
+        "deployment size triggers 429/5xx errors from the API. Mutually exclusive with "
+        "--included-asset-uid. Can be set via KLT_EXCLUDED_ASSET_UIDS env var.",
+        rich_help_panel="Asset Filtering",
+    ),
 ) -> None:
     """
     Run the KoboToolbox data pipeline to extract and load data.
@@ -245,6 +278,8 @@ def incremental(
         dataset_name=dataset_name,
         write_disposition=write_disposition,
         progress=progress,
+        included_asset_uids=included_asset_uid or None,
+        excluded_asset_uids=excluded_asset_uid or None,
     )
 
 

@@ -36,6 +36,8 @@ def kobo_source(
     kobo_token: str = kobo_auth.kobo_token,
     kobo_server: str = kobo_auth.kobo_server,
     kobo_project_view: str = kobo_auth.kobo_project_view,
+    included_asset_uids: list[str] | None = None,
+    excluded_asset_uids: list[str] | None = None,
 ) -> DltSource:
     """Create a DLT source for KoboToolbox data extraction.
 
@@ -59,6 +61,13 @@ def kobo_source(
         KoboToolbox server URL.
     kobo_project_view : str
         KoboToolbox project view UID.
+    included_asset_uids : list[str] | None, optional
+        If given, restrict asset discovery to only these UIDs. Mutually
+        exclusive with excluded_asset_uids.
+    excluded_asset_uids : list[str] | None, optional
+        If given, exclude these UIDs from asset discovery, e.g. to skip
+        assets whose deployment size triggers 429/5xx errors. Mutually
+        exclusive with included_asset_uids.
 
     Returns
     -------
@@ -67,12 +76,8 @@ def kobo_source(
     """
     kobo_client: RESTClient = make_rest_client(kobo_token, kobo_server)
 
-    last_submission_time_hint = make_last_submission_time_hint(
-        asset_last_submission_start, asset_last_submission_end
-    )
-    date_modified_time_hint = make_date_modified_hint(
-        asset_modified_start, asset_modified_end
-    )
+    last_submission_time_hint = make_last_submission_time_hint(asset_last_submission_start, asset_last_submission_end)
+    date_modified_time_hint = make_date_modified_hint(asset_modified_start, asset_modified_end)
 
     kobo_asset_for_submissions = (
         make_resource_kobo_asset(
@@ -80,6 +85,8 @@ def kobo_source(
             kobo_project_view_uid=kobo_project_view,
             resource_name="kobo_asset_for_submissions",
             selected=True,
+            included_asset_uids=included_asset_uids,
+            excluded_asset_uids=excluded_asset_uids,
         )
         .apply_hints(incremental=last_submission_time_hint)
         .add_map(extract_asset_submission_metadata)
@@ -90,11 +97,11 @@ def kobo_source(
         kobo_project_view_uid=kobo_project_view,
         resource_name="kobo_asset",
         selected=True,
+        included_asset_uids=included_asset_uids,
+        excluded_asset_uids=excluded_asset_uids,
     ).apply_hints(incremental=date_modified_time_hint)
 
-    kobo_asset_content = make_resource_kobo_asset_content(
-        kobo_client, kobo_asset_for_content
-    )
+    kobo_asset_content = make_resource_kobo_asset_content(kobo_client, kobo_asset_for_content)
 
     kobo_submission = make_resource_kobo_submission(
         kobo_client,
@@ -103,9 +110,7 @@ def kobo_source(
         submission_time_end=submission_time_end,
     )
 
-    kobo_audit_file = make_resource_kobo_audit_file(
-        kobo_client, kobo_submission, selected=True
-    )
+    kobo_audit_file = make_resource_kobo_audit_file(kobo_client, kobo_submission, selected=True)
 
     return [  # type: ignore[return-value]
         kobo_asset_for_submissions,
@@ -128,6 +133,8 @@ def load_kobo(
     dataset_name: str,
     write_disposition: str = "merge",
     progress: str = "log",
+    included_asset_uids: list[str] | None = None,
+    excluded_asset_uids: list[str] | None = None,
 ) -> None:
     if destination == "postgres":
         pg_creds = PostgresCredentials()
@@ -150,9 +157,10 @@ def load_kobo(
             asset_last_submission_end=asset_last_submission_end,
             asset_modified_start=asset_modified_start,
             asset_modified_end=asset_modified_end,
+            included_asset_uids=included_asset_uids,
+            excluded_asset_uids=excluded_asset_uids,
         ),
         write_disposition=write_disposition,
-        loader_file_format="csv",
     )
     last_trace = pipeline.last_trace
     trace_pipeline = dlt.pipeline(
