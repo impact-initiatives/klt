@@ -44,6 +44,9 @@ COPY --from=builder --chown=kltuser:kltuser /app/.venv /app/.venv
 # Copy DLT config
 COPY --chown=kltuser:kltuser .dlt/config.toml ./.dlt/config.toml
 
+# Copy asset UID include/exclude filter (documented, reviewable allow/deny list)
+COPY --chown=kltuser:kltuser asset_filters.toml ./asset_filters.toml
+
 # Set Python path to use the virtual environment
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1

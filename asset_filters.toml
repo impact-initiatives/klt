@@ -1,0 +1,17 @@
+# Asset UID allow/deny list for the kobo_asset resource.
+#
+# Used to build the KoboToolbox asset discovery API query. Set only one of
+# the two lists below - they are mutually exclusive.
+#
+# excluded_asset_uids: known-problematic assets to skip, e.g. ones whose
+# deployment size (huge submission_count) triggers 429/5xx errors from the
+# KoboToolbox API. Document *why* each UID is here so it can be revisited.
+#
+# included_asset_uids: restrict discovery to only these UIDs, e.g. for
+# targeted backfills or debugging.
+
+included_asset_uids = []
+
+excluded_asset_uids = [
+	"aD9GW37XXQYdPNTUgwqhjc" # Too many deployed versions, causing 5xx and 429 HTTP Errors
+]

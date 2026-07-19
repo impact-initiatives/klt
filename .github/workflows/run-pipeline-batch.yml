@@ -28,6 +28,14 @@ on:
           - days
           - hours
         default: 'months'
+      excluded_asset_uids:
+        description: 'Comma-separated asset UIDs to exclude from discovery (e.g. assets triggering 429/5xx errors). Mutually exclusive with included_asset_uids. Overrides asset_filters.toml for this run.'
+        required: false
+        type: string
+      included_asset_uids:
+        description: 'Comma-separated asset UIDs to restrict discovery to. Mutually exclusive with excluded_asset_uids. Overrides asset_filters.toml for this run.'
+        required: false
+        type: string
       pipeline_name:
         description: 'Pipeline name'
         required: false
@@ -86,6 +94,19 @@ jobs:
           CMD="$CMD --dataset-name '${{ inputs.dataset_name || 'kobo_dev' }}'"
           CMD="$CMD --write-disposition '${{ inputs.write_disposition || 'merge' }}'"
           CMD="$CMD --progress '${{ vars.KLT_PROGRESS || 'log' }}'"
+
+          if [ -n "${{ inputs.excluded_asset_uids }}" ]; then
+            IFS=',' read -ra EXCLUDED_UIDS <<< "${{ inputs.excluded_asset_uids }}"
+            for uid in "${EXCLUDED_UIDS[@]}"; do
+              CMD="$CMD --excluded-asset-uid '$(echo "$uid" | xargs)'"
+            done
+          fi
+          if [ -n "${{ inputs.included_asset_uids }}" ]; then
+            IFS=',' read -ra INCLUDED_UIDS <<< "${{ inputs.included_asset_uids }}"
+            for uid in "${INCLUDED_UIDS[@]}"; do
+              CMD="$CMD --included-asset-uid '$(echo "$uid" | xargs)'"
+            done
+          fi
 
           az container create \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \

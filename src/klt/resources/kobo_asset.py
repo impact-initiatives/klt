@@ -26,9 +26,42 @@ if TYPE_CHECKING:
     from dlt.sources import DltResource
     from dlt.sources.helpers.rest_client.client import RESTClient
 
-asset_hooks = make_kobo_pipeline_hooks(
-    ignored_http_status_codes=[404], enable_http_logging=True
-)
+asset_hooks = make_kobo_pipeline_hooks(ignored_http_status_codes=[404], enable_http_logging=True)
+
+
+def include_assets(asset_uids: list[str]) -> str:
+    """Build a KoboToolbox query filter matching any of the given asset UIDs.
+
+    Parameters
+    ----------
+    asset_uids : list[str]
+        Asset UIDs to match, combined with OR. Must be non-empty.
+
+    Returns
+    -------
+    str
+        Query string of the form "uid:a OR uid:b OR ...".
+    """
+    if not asset_uids:
+        msg = "asset_uids must not be empty"
+        raise ValueError(msg)
+    return " OR ".join(f"uid:{asset_uid}" for asset_uid in asset_uids)
+
+
+def exclude_assets(asset_uids: list[str]) -> str:
+    """Build a KoboToolbox query filter matching any asset UID not in the given list.
+
+    Parameters
+    ----------
+    asset_uids : list[str]
+        Asset UIDs to exclude. Must be non-empty.
+
+    Returns
+    -------
+    str
+        Query string of the form "NOT (uid:a OR uid:b OR ...)".
+    """
+    return f"NOT ({include_assets(asset_uids)})"
 
 
 def make_resource_kobo_asset(
@@ -38,6 +71,8 @@ def make_resource_kobo_asset(
     page_size: int = 1000,
     parallelized: bool = True,
     selected: bool = True,
+    included_asset_uids: list[str] | None = None,
+    excluded_asset_uids: list[str] | None = None,
 ) -> DltResource:
     """Create a DLT resource for fetching KoboToolbox assets from a project view.
 
@@ -59,6 +94,14 @@ def make_resource_kobo_asset(
         Whether to enable parallel processing of this resource.
     selected : bool, default=True
         Whether this resource is selected for loading by default.
+    included_asset_uids : list[str] | None, optional
+        If given, restrict results to only these asset UIDs. Mutually
+        exclusive with excluded_asset_uids.
+    excluded_asset_uids : list[str] | None, optional
+        If given, exclude these asset UIDs from the results. Useful for
+        skipping known-problematic assets (e.g. ones whose deployment
+        size triggers 429/5xx errors from the KoboToolbox API). Mutually
+        exclusive with included_asset_uids.
 
     Returns
     -------
@@ -74,6 +117,9 @@ def make_resource_kobo_asset(
     - Handles 404 HTTP error gracefully via hooks
     - Prevents HTTP redirects during pagination
     """
+    if included_asset_uids and excluded_asset_uids:
+        msg = "included_asset_uids and excluded_asset_uids are mutually exclusive"
+        raise ValueError(msg)
 
     @dlt.resource(
         name=resource_name,
@@ -89,13 +135,23 @@ def make_resource_kobo_asset(
             "ordering": "-date_modified",  # Descending order
         }
 
+        query_parts = []
+
         hint = get_current_hint()
 
         if hint is not None:
             filter_params = build_asset_filter_from_hint(hint)
 
             if filter_params is not None:
-                params.update(filter_params)
+                query_parts.append(filter_params["q"])
+
+        if included_asset_uids:
+            query_parts.append(include_assets(included_asset_uids))
+        elif excluded_asset_uids:
+            query_parts.append(exclude_assets(excluded_asset_uids))
+
+        if query_parts:
+            params["q"] = " AND ".join(query_parts)
 
         for page in kobo_client.paginate(
             path=path,
@@ -173,9 +229,7 @@ def make_resource_kobo_asset_content(
         params = {
             "format": "json",
         }
-        for page in kobo_client.paginate(
-            path=path, params=params, data_selector="data", hooks=asset_hooks
-        ):
+        for page in kobo_client.paginate(path=path, params=params, data_selector="data", hooks=asset_hooks):
             for item in page:
                 item["asset_uid"] = asset_uid
                 yield item
@@ -231,9 +285,7 @@ def extract_asset_submission_metadata(asset: dict) -> dict:
 
 
 @ensure_timezone_aware()
-def make_last_submission_time_hint(
-    initial_value: datetime, end_value: datetime | None = None
-) -> Incremental:
+def make_last_submission_time_hint(initial_value: datetime, end_value: datetime | None = None) -> Incremental:
     """Create incremental hint for deployment__last_submission_time cursor.
 
     Enables incremental loading based on the last submission timestamp,
@@ -275,9 +327,7 @@ def make_last_submission_time_hint(
 
 
 @ensure_timezone_aware()
-def make_date_modified_hint(
-    initial_value: datetime, end_value: datetime | None = None
-) -> Incremental:
+def make_date_modified_hint(initial_value: datetime, end_value: datetime | None = None) -> Incremental:
     """Create incremental hint for date_modified cursor.
 
     Enables incremental loading based on asset modification timestamp,
