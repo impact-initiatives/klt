@@ -107,6 +107,7 @@ jobs:
               DESTINATION__POSTGRES__CREDENTIALS__USERNAME="${{ secrets.POSTGRES_USERNAME }}" \
               DESTINATION__POSTGRES__CREDENTIALS__PASSWORD="${{ secrets.POSTGRES_PASSWORD }}" \
               DESTINATION__POSTGRES__CREDENTIALS__HOST="${{ secrets.POSTGRES_HOST }}" \
+              RUNTIME__SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
             --command-line "$CMD"
 
       - name: Follow container logs
