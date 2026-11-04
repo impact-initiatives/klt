@@ -48,7 +48,7 @@ jobs:
             --azure-file-volume-mount-path /app/klt_pipelines \
             --environment-variables \
               DLT_DATA_DIR=/app/klt_pipelines \
-            --command-line "dlt pipeline ${{ inputs.pipeline_name }} abort-packages"
+            --command-line "dlt -y pipeline ${{ inputs.pipeline_name }} abort-packages"
 
       - name: Wait and show logs
         run: |
