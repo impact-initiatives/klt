@@ -158,23 +158,39 @@ def make_resource_kobo_audit_file(
             yield from quarantine("unparsable_csv", str(e))
             return
 
-        columns = {str(column).strip().lower() for column in csv_content.columns}
-        missing = _REQUIRED_AUDIT_COLUMNS - columns
+        # Normalize the DataFrame's columns to the names that are validated
+        # below, so case/whitespace variants of the header (e.g. "event,Start")
+        # do not raise a KeyError when the columns are accessed afterwards.
+        columns = [str(column).strip().lower() for column in csv_content.columns]
+        missing = _REQUIRED_AUDIT_COLUMNS - set(columns)
         if missing:
             yield from quarantine(
                 "header_contract_violation",
                 f"missing columns {sorted(missing)}; got {list(csv_content.columns)}",
             )
             return
+        if len(set(columns)) != len(columns):
+            # Distinct columns can collide after normalization (e.g. "Start"
+            # and "start"); selecting one of them would yield a DataFrame.
+            yield from quarantine(
+                "header_contract_violation",
+                f"ambiguous columns after normalization; got {list(csv_content.columns)}",
+            )
+            return
+        csv_content.columns = columns
 
+        # errors="coerce" keeps inf/-inf (and huge finite values) as non-NA
+        # floats, which would crash the int64 cast below; also bound the
+        # magnitude so such rows are dropped like other non-castable values.
         starts = pd.to_numeric(csv_content["start"], errors="coerce")
-        dropped = int(starts.isna().sum())
+        valid = starts.notna() & starts.abs().lt(2**63)
+        dropped = int((~valid).sum())
         if dropped:
             logger_dlt.warning(
                 f"Dropping {dropped} audit row(s) with non-numeric 'start' for submission {submission['_id']} at {path}"
             )
-        csv_content = csv_content[starts.notna()].copy()
-        csv_content["start"] = starts[starts.notna()].astype("int64")
+        csv_content = csv_content[valid].copy()
+        csv_content["start"] = starts[valid].astype("int64")
 
         if csv_content.empty:
             logger_dlt.warning(f"Empty audit CSV for submission {submission['_id']} at {path}")

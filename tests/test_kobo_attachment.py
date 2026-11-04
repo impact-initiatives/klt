@@ -393,3 +393,131 @@ def test_quarantine_does_not_redirect_subsequent_audit_rows(
         (3627694, "jump", 1793691499832),
         (3627694, "question", 1793691506207),
     ]
+
+
+@responses.activate
+def test_case_variant_header_loads(
+    kobo_pipeline: Pipeline,
+    db: duckdb.DuckDBPyConnection,
+    kobo_client: RESTClient,
+) -> None:
+    """Test that a header with case variants ("event,Start") still loads.
+
+    Regression test for a Copilot review finding: the header contract checks
+    normalized column names, but the columns are accessed afterwards on the
+    DataFrame. Columns must be renamed to their normalized names first, or a
+    passing check is followed by an uncaught KeyError.
+    """
+    # Arrange: valid header except for the capitalized "Start"
+    asset_uid = "test_asset"
+    submission = make_submission_data(
+        submission_id=4,
+        submission_uuid="uuid-4",
+        asset_uid=asset_uid,
+        _attachments=[make_attachment_data(4)],
+    )
+    mock_asset_and_submission_endpoints(asset_uid, [submission])
+    responses.add(
+        responses.GET,
+        make_attachment_data(4)["download_url"],
+        body=b"event,Start\r\njump,1793691499832\r\n",
+        status=200,
+    )
+
+    # Act
+    load_info, *_ = run_audit_pipeline(kobo_pipeline, kobo_client)
+
+    # Assert: row loads under the normalized column, nothing quarantined
+    assert load_info.has_failed_jobs is False
+    rows = db.execute("SELECT event, start FROM submission_audit").fetchall()
+    assert rows == [("jump", 1793691499832)]
+    assert table_row_count(db, "submission_audit_quarantine") == 0
+
+
+@responses.activate
+def test_ambiguous_duplicate_header_quarantines(
+    kobo_pipeline: Pipeline,
+    db: duckdb.DuckDBPyConnection,
+    kobo_client: RESTClient,
+) -> None:
+    """Test that colliding columns after normalization quarantine the file.
+
+    Regression test for a Copilot review finding: two distinct header columns
+    can normalize to the same name ("event,Start,start"); selecting one of
+    them would yield a DataFrame and crash. The file must be quarantined
+    instead of aborting extraction. (Exact duplicates don't trigger this:
+    pandas already mangles them to "start.1".)
+    """
+    # Arrange: "Start" and "start" both normalize to "start"
+    asset_uid = "test_asset"
+    submission = make_submission_data(
+        submission_id=5,
+        submission_uuid="uuid-5",
+        asset_uid=asset_uid,
+        _attachments=[make_attachment_data(5)],
+    )
+    mock_asset_and_submission_endpoints(asset_uid, [submission])
+    responses.add(
+        responses.GET,
+        make_attachment_data(5)["download_url"],
+        body=b"event,Start,start\r\njump,1793691499832,1\r\n",
+        status=200,
+    )
+
+    # Act
+    load_info, *_ = run_audit_pipeline(kobo_pipeline, kobo_client)
+
+    # Assert: run is green, no audit rows, one quarantine record
+    assert load_info.has_failed_jobs is False
+    assert table_row_count(db, "submission_audit") == 0
+    error_type, error_message = db.execute(
+        "SELECT error_type, error_message FROM submission_audit_quarantine"
+    ).fetchone()
+    assert error_type == "header_contract_violation"
+    assert "ambiguous" in error_message
+
+
+@responses.activate
+def test_non_finite_start_rows_dropped(
+    kobo_pipeline: Pipeline,
+    db: duckdb.DuckDBPyConnection,
+    kobo_client: RESTClient,
+    capture_logs: io.StringIO,
+) -> None:
+    """Test that inf/-inf/overflow "start" values are dropped, not crashing.
+
+    Regression test for a Copilot review finding: pd.to_numeric(errors="coerce")
+    keeps inf and huge finite values as valid floats, so the int64 cast raised
+    outside the parsing exception handler and aborted the run.
+    """
+    # Arrange: one valid row plus inf, -inf, and an int64-overflow value
+    asset_uid = "test_asset"
+    submission = make_submission_data(
+        submission_id=6,
+        submission_uuid="uuid-6",
+        asset_uid=asset_uid,
+        _attachments=[make_attachment_data(6)],
+    )
+    mock_asset_and_submission_endpoints(asset_uid, [submission])
+    responses.add(
+        responses.GET,
+        make_attachment_data(6)["download_url"],
+        body=(
+            b"event,start,end\r\n"
+            b"jump,1793691499832,1793691506127\r\n"
+            b"question,inf,\r\n"
+            b"question,-inf,\r\n"
+            b"question,1e40,\r\n"
+        ),
+        status=200,
+    )
+
+    # Act
+    load_info, *_ = run_audit_pipeline(kobo_pipeline, kobo_client)
+
+    # Assert: only the valid row is loaded, dropped rows warn, no quarantine
+    assert load_info.has_failed_jobs is False
+    rows = db.execute("SELECT event, start FROM submission_audit").fetchall()
+    assert rows == [("jump", 1793691499832)]
+    assert table_row_count(db, "submission_audit_quarantine") == 0
+    assert "Dropping 3 audit row(s) with non-numeric 'start'" in capture_logs.getvalue()
