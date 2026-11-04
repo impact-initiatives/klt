@@ -1,5 +1,5 @@
 name: Cleanup Pipeline State
-run-name: Drop pending packages for ${{ inputs.pipeline_name }}
+run-name: Abort pending packages for ${{ inputs.pipeline_name }}
 
 on:
   workflow_dispatch:
@@ -48,7 +48,7 @@ jobs:
             --azure-file-volume-mount-path /app/klt_pipelines \
             --environment-variables \
               DLT_DATA_DIR=/app/klt_pipelines \
-            --command-line "dlt pipeline ${{ inputs.pipeline_name }} drop-pending-packages"
+            --command-line "dlt pipeline ${{ inputs.pipeline_name }} abort-packages"
 
       - name: Wait and show logs
         run: |
