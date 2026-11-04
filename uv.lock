@@ -730,7 +730,7 @@ dev = [
 requires-dist = [
     { name = "azure-identity", specifier = ">=1.25.1" },
     { name = "azure-keyvault-secrets", specifier = ">=4.9.0" },
-    { name = "dlt", extras = ["duckdb", "postgres", "workspace"], specifier = ">=1.17.1" },
+    { name = "dlt", extras = ["duckdb", "postgres"], specifier = ">=1.17.1" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "orjson", specifier = ">=3.11.4" },
     { name = "pandas", specifier = ">=2.3.3" },
